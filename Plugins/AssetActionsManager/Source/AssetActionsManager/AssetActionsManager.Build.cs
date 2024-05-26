@@ -26,6 +26,7 @@ public class AssetActionsManager : ModuleRules
 			new string[]
 			{
 				"Core",
+				"Slate"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
