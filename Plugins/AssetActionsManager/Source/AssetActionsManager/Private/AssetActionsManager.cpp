@@ -1,6 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "AssetActionsManager.h"
+#include "DebugHelper.h"
 
 #define LOCTEXT_NAMESPACE "FAssetActionsManagerModule"
 
