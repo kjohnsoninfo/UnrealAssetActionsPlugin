@@ -32,7 +32,6 @@ private:
 
 #pragma region RowsInListView
 	TArray<TSharedPtr<FAssetData>> AssetDataArrayFromManager;
-	TArray<TSharedPtr<FAssetData>> AssetDataArrayToDisplay;
 
 	TSharedRef<ITableRow> OnGenerateRowForListView(TSharedPtr<FAssetData> AssetDataToDisplay, const TSharedRef<STableViewBase>& OwnerTable);
 	TSharedRef<STextBlock> ConstructTextForRow(const FString& RowText);

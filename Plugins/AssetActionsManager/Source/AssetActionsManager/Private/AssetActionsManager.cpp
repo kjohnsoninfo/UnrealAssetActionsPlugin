@@ -99,13 +99,6 @@ TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::GetAllAssetDataUnderS
 {
 	TArray<TSharedPtr<FAssetData>> AllAssetsData; // type matches what item source in widget expects
 
-	// Restrict folder selection to one to mitigate errors
-	if (SelectedFolderPaths.Num() > 1)
-	{
-		DebugHelper::MessageDialogBox(EAppMsgType::Ok, TEXT("Please select only one folder."));
-		return AllAssetsData;
-	}
-
 	// Use List Assets to get all assets paths
 	TArray<FString> AssetsPathNames = UEditorAssetLibrary::ListAssets(SelectedFolderPaths[0]);
 
@@ -129,7 +122,7 @@ TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::GetAllAssetDataUnderS
 		// If asset does not exist, skip and move to next asset
 		if (!UEditorAssetLibrary::DoesAssetExist(AssetPathName)) continue;
 
-		// Get asset data
+		// Get asset data and add to array to pass to widget
 		FAssetData AssetData = UEditorAssetLibrary::FindAssetData(AssetPathName);
 		AllAssetsData.Add(MakeShared<FAssetData>(AssetData));
 	}

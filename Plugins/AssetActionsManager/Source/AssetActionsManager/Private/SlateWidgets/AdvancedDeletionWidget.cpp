@@ -11,8 +11,6 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 	bCanSupportFocus = true;
 	AssetDataArrayFromManager = InArgs._AssetsDataFromManager; // set widget data array to data passed in from manager
 
-	
-
 	ChildSlot
 		[
 			// Parent box to hold all interior widgets
@@ -197,7 +195,9 @@ TSharedRef<ITableRow> SAdvancedDeletionTab::OnGenerateRowForListView(TSharedPtr<
 
 				// Fourth slot for parent folder path
 				+ SHorizontalBox::Slot()
-
+				[
+					ConstructTextForRow(AssetParentFolder)
+				]
 
 				// Fifth slot for single deletion
 				+ SHorizontalBox::Slot()
