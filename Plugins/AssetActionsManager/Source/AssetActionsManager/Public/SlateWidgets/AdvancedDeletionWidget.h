@@ -12,5 +12,16 @@ class SAdvancedDeletionTab : public SCompoundWidget
 
 public:
 	void Construct(const FArguments& InArgs);
+
+private:
+#pragma region TitleSlot
+	TSharedRef<STextBlock> ConstructTitleTextForTab(const FString& TextContent);
+	TSharedRef<SButton> ConstructHelpButton();
+	FReply OnHelpButtonClicked();
+#pragma endregion
+
+
+	FSlateFontInfo GetEmbossedFont() const { return FCoreStyle::Get().GetFontStyle(FName("EmbossedText")); }
+
 };
 
