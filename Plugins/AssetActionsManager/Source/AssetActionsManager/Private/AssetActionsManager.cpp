@@ -98,17 +98,23 @@ TSharedRef<SDockTab> FAssetActionsManagerModule::OnSpawnAdvancedDeletionTab(cons
 TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::GetAllAssetDataUnderSelectedFolder()
 {
 	TArray<TSharedPtr<FAssetData>> AllAssetsData; // type matches what item source in widget expects
+	TArray<FString> AllAssetsPathsNames;
+
+	for (const FString SelectedFolderPath : SelectedFolderPaths)
+	{
+		TArray<FString> AssetsPathNames = UEditorAssetLibrary::ListAssets(SelectedFolderPath);
+		AllAssetsPathsNames.Append(AssetsPathNames);
+	}
 
 	// Use List Assets to get all assets paths
-	TArray<FString> AssetsPathNames = UEditorAssetLibrary::ListAssets(SelectedFolderPaths[0]);
 
 	// Check if selected folder contains assets - might move this to an if check in the widget and display no results
-	if (AssetsPathNames.Num() == 0)
+	if (AllAssetsPathsNames.Num() == 0)
 	{
 		DebugHelper::MessageDialogBox(EAppMsgType::Ok, TEXT("No assets found under selected folder"));
 	}
 
-	for (const FString AssetPathName : AssetsPathNames)
+	for (const FString AssetPathName : AllAssetsPathsNames)
 	{
 		// Don't delete any required UE assets
 		if (AssetPathName.Contains(TEXT("Developers")) ||
