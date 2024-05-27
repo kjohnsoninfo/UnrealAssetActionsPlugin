@@ -27,9 +27,8 @@ private:
 
 #pragma region AdvancedDeletionTab
 
-	//void RegisterAdvancedDeletionTab();
-
-	//TSharedRef<SDockTab> OnSpawnAdvancedDeletionTab(const FSpawnTabArgs& AdvancedDeletionTabArgs);
+	void RegisterAdvancedDeletionTab();
+	TSharedRef<SDockTab> OnSpawnAdvancedDeletionTab(const FSpawnTabArgs& AdvancedDeletionTabArgs);
 
 #pragma endregion
 

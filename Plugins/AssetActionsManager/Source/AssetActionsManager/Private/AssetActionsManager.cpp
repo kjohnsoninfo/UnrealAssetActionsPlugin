@@ -3,13 +3,14 @@
 #include "AssetActionsManager.h"
 #include "DebugHelper.h"
 #include "ContentBrowserModule.h" 
+#include "SlateWidgets/AdvancedDeletionWidget.h"
 
 #define LOCTEXT_NAMESPACE "FAssetActionsManagerModule"
 
 void FAssetActionsManagerModule::StartupModule()
 {
 	InitCBMenuExtension();
-	//RegisterAdvancedDeletionTab();
+	RegisterAdvancedDeletionTab();
 }
 
 void FAssetActionsManagerModule::ShutdownModule()
@@ -68,25 +69,29 @@ void FAssetActionsManagerModule::AddCBMenuEntry(FMenuBuilder& MenuBuilder)
 
 void FAssetActionsManagerModule::OnAdvancedDeleteButtonClicked()
 {
-	DebugHelper::Print("Button clicked");
 	// Spawn tab 
+	FGlobalTabmanager::Get()->TryInvokeTab(FName("AdvancedDeletion"));
 }
 
 #pragma endregion
 
 #pragma region AdvancedDeletionTab
 
-//void FAssetActionsManagerModule::RegisterAdvancedDeletionTab()
-//{
-//	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(FName("AdvancedDeletion"),
-//		FOnSpawnTab::CreateRaw(this, &FAssetActionsManagerModule::OnSpawnAdvancedDeletionTab))
-//		.SetDisplayName(FText::FromString(TEXT("Advanced Deletion")));
-//}
-//
-//TSharedRef<SDockTab> FAssetActionsManagerModule::OnSpawnAdvancedDeletionTab(const FSpawnTabArgs& AdvancedDeletionTabArgs)
-//{
-//	return TSharedRef<SDockTab>();
-//}
+void FAssetActionsManagerModule::RegisterAdvancedDeletionTab()
+{
+	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(FName("AdvancedDeletion"),
+		FOnSpawnTab::CreateRaw(this, &FAssetActionsManagerModule::OnSpawnAdvancedDeletionTab))
+		.SetDisplayName(FText::FromString(TEXT("Advanced Deletion")));
+}
+
+TSharedRef<SDockTab> FAssetActionsManagerModule::OnSpawnAdvancedDeletionTab(const FSpawnTabArgs& AdvancedDeletionTabArgs)
+{
+	return
+		SNew(SDockTab).TabRole(ETabRole::NomadTab)
+		[
+			SNew(SAdvancedDeletionTab)
+		];
+}
 
 #pragma endregion
 
