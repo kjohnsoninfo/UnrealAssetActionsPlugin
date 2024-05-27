@@ -2,12 +2,16 @@
 
 
 #include "SlateWidgets/AdvancedDeletionWidget.h"
+#include "DebugHelper.h"
 
 #define LOCTEXT_NAMESPACE "SAdvancedDeletionTab"
 
 void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 {
 	bCanSupportFocus = true;
+	AssetDataArrayFromManager = InArgs._AssetsDataFromManager; // set widget data array to data passed in from manager
+
+	
 
 	ChildSlot
 		[
@@ -51,13 +55,15 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 
 			// Third slot for list view
 			+ SVerticalBox::Slot()
-			.AutoHeight()
+			.VAlign(VAlign_Fill)
 			[
-				SNew(SHorizontalBox)
+				SNew(SScrollBox)
 
 				// List View
-				+ SHorizontalBox::Slot()
-
+				+ SScrollBox::Slot()
+				[
+					ConstructAssetListView()
+				]
 			]
 
 
@@ -95,14 +101,14 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 
 #pragma region TitleBar
 
-TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTitleTextForTab(const FString& TextContent)
+TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTitleTextForTab(const FString& TitleText)
 {
 	FSlateFontInfo TextFont = GetEmbossedFont();
 	TextFont.Size = 10;
 
 	TSharedRef<STextBlock> ConstructedTextBlock =
 		SNew(STextBlock)
-		.Text(FText::FromString(TextContent))
+		.Text(FText::FromString(TitleText))
 		.Font(TextFont)
 		.Justification(ETextJustify::Left)
 		.Margin(FMargin(10.f))
@@ -136,6 +142,83 @@ FReply SAdvancedDeletionTab::OnHelpButtonClicked()
 	FPlatformProcess::LaunchURL(*HelpUrl, NULL, NULL);
 	
 	return FReply::Handled();
+}
+
+#pragma endregion
+
+#pragma region ListView
+
+TSharedRef<SListView<TSharedPtr<FAssetData>>> SAdvancedDeletionTab::ConstructAssetListView()
+{
+	TSharedRef<SListView<TSharedPtr<FAssetData>>> ConstructedAssetListView =
+		SNew(SListView<TSharedPtr<FAssetData>>)
+		.ItemHeight(24.f) // height of each row
+		.ListItemsSource(&AssetDataArrayFromManager) // pointer to array of source items
+		.OnGenerateRow(this, &SAdvancedDeletionTab::OnGenerateRowForListView); // create row for every asset found
+
+	return ConstructedAssetListView;
+}
+
+#pragma endregion
+
+#pragma region RowsInListView
+
+TSharedRef<ITableRow> SAdvancedDeletionTab::OnGenerateRowForListView(TSharedPtr<FAssetData> AssetDataToDisplay, const TSharedRef<STableViewBase>& OwnerTable)
+{
+	// check if AssetData is valid
+	if (!AssetDataToDisplay.IsValid()) return SNew(STableRow<TSharedPtr<FAssetData>>, OwnerTable);
+
+	// Get AssetData values
+	const FString AssetName = AssetDataToDisplay->AssetName.ToString();
+	const FString AssetClass = AssetDataToDisplay->GetClass()->GetName();
+	const FString AssetParentFolder = AssetDataToDisplay->PackagePath.ToString();
+
+	// return a ref to a table row to the OnGenerateRow fn
+	TSharedRef<STableRow<TSharedPtr<FAssetData>>> RowWidgetForListView =
+		SNew(STableRow<TSharedPtr<FAssetData>>, OwnerTable)
+		.Padding(FMargin(5.f))
+		[
+			// Parent container for row
+			SNew(SHorizontalBox)
+
+				// First slot for checkbox
+				+ SHorizontalBox::Slot()
+
+				// Second slot for asset name
+				+ SHorizontalBox::Slot()
+				[
+					ConstructTextForRow(AssetName)
+				]
+				// Third slot for asset class
+				+ SHorizontalBox::Slot()
+				[
+					ConstructTextForRow(AssetClass)
+				]
+
+				// Fourth slot for parent folder path
+				+ SHorizontalBox::Slot()
+
+
+				// Fifth slot for single deletion
+				+ SHorizontalBox::Slot()
+
+		];
+
+		return RowWidgetForListView;
+}
+
+TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTextForRow(const FString& RowText)
+{
+	FSlateFontInfo TextFont = GetEmbossedFont();
+	TextFont.Size = 10;
+
+	TSharedRef<STextBlock> ConstructedTextBlock =
+		SNew(STextBlock)
+		.Text(FText::FromString(RowText))
+		.Font(TextFont)
+		.ColorAndOpacity(FColor::White);
+
+	return ConstructedTextBlock;
 }
 
 #pragma endregion

@@ -26,7 +26,9 @@ public class AssetActionsManager : ModuleRules
 			new string[]
 			{
 				"Core",
-				"Slate"
+				"Slate",
+				"InputCore",
+				"EditorScriptingUtilities"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

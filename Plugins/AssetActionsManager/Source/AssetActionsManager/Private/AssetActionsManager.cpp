@@ -4,6 +4,7 @@
 #include "DebugHelper.h"
 #include "ContentBrowserModule.h" 
 #include "SlateWidgets/AdvancedDeletionWidget.h"
+#include "EditorAssetLibrary.h"
 
 #define LOCTEXT_NAMESPACE "FAssetActionsManagerModule"
 
@@ -90,7 +91,50 @@ TSharedRef<SDockTab> FAssetActionsManagerModule::OnSpawnAdvancedDeletionTab(cons
 		SNew(SDockTab).TabRole(ETabRole::NomadTab)
 		[
 			SNew(SAdvancedDeletionTab)
+				.AssetsDataFromManager(GetAllAssetDataUnderSelectedFolder())
 		];
+}
+
+TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::GetAllAssetDataUnderSelectedFolder()
+{
+	TArray<TSharedPtr<FAssetData>> AllAssetsData; // type matches what item source in widget expects
+
+	// Restrict folder selection to one to mitigate errors
+	if (SelectedFolderPaths.Num() > 1)
+	{
+		DebugHelper::MessageDialogBox(EAppMsgType::Ok, TEXT("Please select only one folder."));
+		return AllAssetsData;
+	}
+
+	// Use List Assets to get all assets paths
+	TArray<FString> AssetsPathNames = UEditorAssetLibrary::ListAssets(SelectedFolderPaths[0]);
+
+	// Check if selected folder contains assets - might move this to an if check in the widget and display no results
+	if (AssetsPathNames.Num() == 0)
+	{
+		DebugHelper::MessageDialogBox(EAppMsgType::Ok, TEXT("No assets found under selected folder"));
+	}
+
+	for (const FString AssetPathName : AssetsPathNames)
+	{
+		// Don't delete any required UE assets
+		if (AssetPathName.Contains(TEXT("Developers")) ||
+			AssetPathName.Contains(TEXT("Collections")) ||
+			AssetPathName.Contains(TEXT("__ExternalActors__")) ||
+			AssetPathName.Contains(TEXT("__ExternalObjects__")))
+		{
+			continue;
+		}
+
+		// If asset does not exist, skip and move to next asset
+		if (!UEditorAssetLibrary::DoesAssetExist(AssetPathName)) continue;
+
+		// Get asset data
+		FAssetData AssetData = UEditorAssetLibrary::FindAssetData(AssetPathName);
+		AllAssetsData.Add(MakeShared<FAssetData>(AssetData));
+	}
+
+	return AllAssetsData;
 }
 
 #pragma endregion
