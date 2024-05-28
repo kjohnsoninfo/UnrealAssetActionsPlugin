@@ -152,7 +152,17 @@ TSharedRef<SListView<TSharedPtr<FAssetData>>> SAdvancedDeletionTab::ConstructAss
 		SNew(SListView<TSharedPtr<FAssetData>>)
 		.ItemHeight(24.f) // height of each row
 		.ListItemsSource(&AssetDataArrayFromManager) // pointer to array of source items
-		.OnGenerateRow(this, &SAdvancedDeletionTab::OnGenerateRowForListView); // create row for every asset found
+		.OnGenerateRow(this, &SAdvancedDeletionTab::OnGenerateRowForListView) // create row for every asset found
+		.HeaderRow
+		(
+			SNew(SHeaderRow)
+
+			+ SHeaderRow::Column("CheckBox")
+			+ SHeaderRow::Column("Name").DefaultLabel(FText::FromString(TEXT("Asset Name")))
+			+ SHeaderRow::Column("Class").DefaultLabel(FText::FromString(TEXT("Asset Class")))
+			+ SHeaderRow::Column("Path").DefaultLabel(FText::FromString(TEXT("Asset Parent Folder")))
+			+ SHeaderRow::Column("Delete")
+		);
 
 	return ConstructedAssetListView;
 }
