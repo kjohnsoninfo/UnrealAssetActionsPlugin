@@ -5,6 +5,7 @@
 #include "ContentBrowserModule.h" 
 #include "SlateWidgets/AdvancedDeletionWidget.h"
 #include "EditorAssetLibrary.h"
+#include "ObjectTools.h"
 
 #define LOCTEXT_NAMESPACE "FAssetActionsManagerModule"
 
@@ -12,12 +13,6 @@ void FAssetActionsManagerModule::StartupModule()
 {
 	InitCBMenuExtension();
 	RegisterAdvancedDeletionTab();
-}
-
-void FAssetActionsManagerModule::ShutdownModule()
-{
-	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
-	// we call this function before unloading the module.
 }
 
 #pragma region ExtendContentBrowserMenu
@@ -82,7 +77,8 @@ void FAssetActionsManagerModule::RegisterAdvancedDeletionTab()
 {
 	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(FName("AdvancedDeletion"),
 		FOnSpawnTab::CreateRaw(this, &FAssetActionsManagerModule::OnSpawnAdvancedDeletionTab))
-		.SetDisplayName(FText::FromString(TEXT("Advanced Deletion")));
+		.SetDisplayName(FText::FromString(TEXT("Advanced Deletion")))
+		.SetAutoGenerateMenuEntry(false);
 }
 
 TSharedRef<SDockTab> FAssetActionsManagerModule::OnSpawnAdvancedDeletionTab(const FSpawnTabArgs& AdvancedDeletionTabArgs)
@@ -137,6 +133,25 @@ TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::GetAllAssetDataUnderS
 }
 
 #pragma endregion
+
+#pragma region ProcessDataForAdvancedDeletion
+
+bool FAssetActionsManagerModule::DeleteAssetsInList(const TArray<FAssetData>& AssetsToDelete)
+{
+	if (ObjectTools::DeleteAssets(AssetsToDelete) > 0)
+	{
+		return true;
+	}
+
+	return false;
+}
+
+#pragma endregion
+
+void FAssetActionsManagerModule::ShutdownModule()
+{
+	FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(FName("AdvancedDeletion"));
+}
 
 #undef LOCTEXT_NAMESPACE
 	

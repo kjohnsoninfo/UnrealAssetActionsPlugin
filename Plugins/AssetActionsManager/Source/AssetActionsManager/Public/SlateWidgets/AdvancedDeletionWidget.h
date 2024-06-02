@@ -27,14 +27,19 @@ private:
 #pragma region ListView
 
 	TSharedRef<SListView<TSharedPtr<FAssetData>>> ConstructAssetListView();
+	TSharedPtr<SListView<TSharedPtr<FAssetData>>> ConstructedAssetListView; // Ptr since it can be null before construction
+	void RefreshAssetListView();
 
 #pragma endregion
 
 #pragma region RowsInListView
-	TArray<TSharedPtr<FAssetData>> AssetDataArrayFromManager;
+	TArray<TSharedPtr<FAssetData>> AssetsDataFromManager;
 
 	TSharedRef<ITableRow> OnGenerateRowForListView(TSharedPtr<FAssetData> AssetDataToDisplay, const TSharedRef<STableViewBase>& OwnerTable);
 	TSharedRef<STextBlock> ConstructTextForRow(const FString& RowText);
+
+	TSharedRef<SButton> ConstructDeleteButtonForRow(const TSharedPtr<FAssetData>& AssetDataToDisplay);
+	FReply OnDeleteButtonClicked(TSharedPtr<FAssetData> ClickedAssetData);
 #pragma endregion
 
 

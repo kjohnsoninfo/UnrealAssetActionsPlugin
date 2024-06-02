@@ -13,6 +13,13 @@ public:
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
 
+#pragma region ProcessDataForAdvancedDeletion
+
+	bool DeleteAssetsInList(const TArray<FAssetData>& AssetsToDelete);
+
+#pragma endregion
+
+
 private:
 #pragma region ExtendContentBrowserMenu
 	

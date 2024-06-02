@@ -3,13 +3,14 @@
 
 #include "SlateWidgets/AdvancedDeletionWidget.h"
 #include "DebugHelper.h"
+#include "AssetActionsManager.h"
 
 #define LOCTEXT_NAMESPACE "SAdvancedDeletionTab"
 
 void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 {
 	bCanSupportFocus = true;
-	AssetDataArrayFromManager = InArgs._AssetsDataFromManager; // set widget data array to data passed in from manager
+	AssetsDataFromManager = InArgs._AssetsDataFromManager; // set widget data array to data passed in from manager
 
 	ChildSlot
 		[
@@ -148,10 +149,10 @@ FReply SAdvancedDeletionTab::OnHelpButtonClicked()
 
 TSharedRef<SListView<TSharedPtr<FAssetData>>> SAdvancedDeletionTab::ConstructAssetListView()
 {
-	TSharedRef<SListView<TSharedPtr<FAssetData>>> ConstructedAssetListView =
+	ConstructedAssetListView =
 		SNew(SListView<TSharedPtr<FAssetData>>)
 		.ItemHeight(24.f) // height of each row
-		.ListItemsSource(&AssetDataArrayFromManager) // pointer to array of source items
+		.ListItemsSource(&AssetsDataFromManager) // pointer to array of source items
 		.OnGenerateRow(this, &SAdvancedDeletionTab::OnGenerateRowForListView) // create row for every asset found
 		.HeaderRow
 		(
@@ -161,10 +162,19 @@ TSharedRef<SListView<TSharedPtr<FAssetData>>> SAdvancedDeletionTab::ConstructAss
 			+ SHeaderRow::Column("Name").DefaultLabel(FText::FromString(TEXT("Asset Name")))
 			+ SHeaderRow::Column("Class").DefaultLabel(FText::FromString(TEXT("Asset Class")))
 			+ SHeaderRow::Column("Path").DefaultLabel(FText::FromString(TEXT("Asset Parent Folder")))
-			+ SHeaderRow::Column("Delete")
+			+ SHeaderRow::Column("Delete").DefaultLabel(FText::FromString(TEXT(""))).FillWidth(.375f)
 		);
 
-	return ConstructedAssetListView;
+	return ConstructedAssetListView.ToSharedRef(); // convert to ref after construction
+}
+
+void SAdvancedDeletionTab::RefreshAssetListView()
+{
+	// since ptr can be null, check if valid before refresh
+	if (ConstructedAssetListView.IsValid())
+	{
+		ConstructedAssetListView->RebuildList();
+	}
 }
 
 #pragma endregion
@@ -211,6 +221,12 @@ TSharedRef<ITableRow> SAdvancedDeletionTab::OnGenerateRowForListView(TSharedPtr<
 
 				// Fifth slot for single deletion
 				+ SHorizontalBox::Slot()
+				.HAlign(HAlign_Right)
+				.VAlign(VAlign_Fill)
+				.FillWidth(.5f)
+				[
+					ConstructDeleteButtonForRow(AssetDataToDisplay)
+				]
 
 		];
 
@@ -229,6 +245,43 @@ TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTextForRow(const FString& 
 		.ColorAndOpacity(FColor::White);
 
 	return ConstructedTextBlock;
+}
+
+TSharedRef<SButton> SAdvancedDeletionTab::ConstructDeleteButtonForRow(const TSharedPtr<FAssetData>& AssetDataToDisplay)
+{
+	TSharedRef<SButton> ConstructedDeleteButton = 
+		SNew(SButton)
+		.Text(FText::FromString(TEXT("Delete")))
+		.OnClicked(this, &SAdvancedDeletionTab::OnDeleteButtonClicked, AssetDataToDisplay);
+
+	return ConstructedDeleteButton;
+}
+
+FReply SAdvancedDeletionTab::OnDeleteButtonClicked(TSharedPtr<FAssetData> ClickedAssetData) // ClickedData = AssetDataToDisplay for the selected row
+{
+	// Add single asset to array since ObjectTools::Delete expects an array
+	TArray<FAssetData> AssetToDelete;
+	AssetToDelete.Add(*ClickedAssetData.Get()); // deref from Ptr
+
+	// Load manager module
+	FAssetActionsManagerModule& AssetActionsManager =
+	FModuleManager::LoadModuleChecked<FAssetActionsManagerModule>(TEXT("AssetActionsManager"));
+
+	// Call delete fn from manager module passing in the clicked data
+	bool bAssetDeleted = AssetActionsManager.DeleteAssetsInList(AssetToDelete);
+
+	// Remove from list view if asset was deleted
+	if (bAssetDeleted)
+	{
+		if (AssetsDataFromManager.Contains(ClickedAssetData))
+		{
+			AssetsDataFromManager.Remove(ClickedAssetData);
+		}
+
+		RefreshAssetListView();
+	}
+
+	return FReply::Handled();
 }
 
 #pragma endregion
