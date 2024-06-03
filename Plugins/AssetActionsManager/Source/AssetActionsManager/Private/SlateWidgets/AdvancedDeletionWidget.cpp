@@ -191,6 +191,10 @@ TSharedRef<SListView<TSharedPtr<FAssetData>>> SAdvancedDeletionTab::ConstructAss
 
 void SAdvancedDeletionTab::RefreshAssetListView()
 {
+	// ensure clean slate when refreshed
+	CheckBoxesArray.Empty();
+	CheckedAssetsToDelete.Empty();
+
 	// since ptr can be null, check if valid before refresh
 	if (ConstructedAssetListView.IsValid())
 	{
@@ -370,7 +374,6 @@ TSharedRef<SButton> SAdvancedDeletionTab::ConstructButtonForSlot(const FString& 
 
 TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTextForButtonSlot(const FString& ButtonName)
 {
-
 	TSharedRef<STextBlock> ConstructedTextForButtonSlot =
 		SNew(STextBlock)
 		.Text(FText::FromString(ButtonName))
@@ -398,13 +401,16 @@ void SAdvancedDeletionTab::AssignButtonClickFns(const FString& ButtonName)
 }
 
 FReply SAdvancedDeletionTab::OnDeleteSelectedButtonClicked()
+/*
+	Delete all assets in CheckedAssetsToDeleteArray
+*/
 {
 	if (CheckedAssetsToDelete.Num() == 0)
 	{
 		DebugHelper::MessageDialogBox(EAppMsgType::Ok, TEXT("No assets selected."));
 		return FReply::Handled();
 	}
-
+	
 	// Convert array of ptr to array of FAssetData for delete fn
 	TArray<FAssetData> AssetsToDelete;
 		
@@ -439,13 +445,32 @@ FReply SAdvancedDeletionTab::OnDeleteSelectedButtonClicked()
 
 FReply SAdvancedDeletionTab::OnSelectAllButtonClicked()
 {
-	DebugHelper::Print(TEXT("Select All"));
+	if (CheckBoxesArray.Num() == 0) return FReply::Handled();
+
+	for (const TSharedRef<SCheckBox> CheckBox : CheckBoxesArray)
+	{
+		// if not already checked, toggle state to checked
+		if (!CheckBox->IsChecked())
+		{
+			CheckBox->ToggleCheckedState();
+		}
+	}
+
 	return FReply::Handled();
 }
 
 FReply SAdvancedDeletionTab::OnDeselectAllButtonClicked()
 {
-	DebugHelper::Print(TEXT("deSelect All"));
+	if (CheckBoxesArray.Num() == 0) return FReply::Handled();
+
+	for (const TSharedRef<SCheckBox> CheckBox : CheckBoxesArray)
+	{
+		// if already checked, toggle state to unchecked
+		if (CheckBox->IsChecked())
+		{
+			CheckBox->ToggleCheckedState();
+		}
+	}
 	return FReply::Handled();
 }
 
