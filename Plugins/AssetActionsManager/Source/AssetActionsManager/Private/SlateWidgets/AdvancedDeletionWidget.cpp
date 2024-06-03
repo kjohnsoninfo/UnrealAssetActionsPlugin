@@ -12,6 +12,9 @@
 
 
 void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
+/*
+	Widget constructor that initializes all variables and Slate components
+*/
 {
 	bCanSupportFocus = true;
 	AssetsDataFromManager = InArgs._AssetsDataFromManager; // set widget data array to data passed in from manager
@@ -125,6 +128,9 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 #pragma region TitleBar
 
 TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTitleTextForTab(const FString& TitleText)
+/*
+	Construct a STextBlock for the Title Text at the top of the widget
+*/
 {
 	TSharedRef<STextBlock> ConstructedTextBlock =
 		SNew(STextBlock)
@@ -138,6 +144,9 @@ TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTitleTextForTab(const FStr
 }
 
 TSharedRef<SButton> SAdvancedDeletionTab::ConstructHelpButton()
+/*
+	Construct a help button that opens a webpage in the browser that points to documentation for the widget
+*/
 {
 	TSharedRef<SButton> ConstructedHelpButton =
 		SNew(SButton)
@@ -157,8 +166,11 @@ TSharedRef<SButton> SAdvancedDeletionTab::ConstructHelpButton()
 }
 
 FReply SAdvancedDeletionTab::OnHelpButtonClicked()
+/*
+	When help button is clicked, launch the specified url
+*/
 {
-	const FString& HelpUrl = "https://www.unrealengine.com/en-US";
+	const FString& HelpUrl = "https://www.unrealengine.com/en-US"; 
 	FPlatformProcess::LaunchURL(*HelpUrl, NULL, NULL);
 	
 	return FReply::Handled();
@@ -169,6 +181,9 @@ FReply SAdvancedDeletionTab::OnHelpButtonClicked()
 #pragma region ListView
 
 TSharedRef<SListView<TSharedPtr<FAssetData>>> SAdvancedDeletionTab::ConstructAssetListView()
+/*
+	Construct a SListView that generates rows for each asset found in the selected folder
+*/
 {
 	ConstructedAssetListView =
 		SNew(SListView<TSharedPtr<FAssetData>>)
@@ -190,6 +205,9 @@ TSharedRef<SListView<TSharedPtr<FAssetData>>> SAdvancedDeletionTab::ConstructAss
 }
 
 void SAdvancedDeletionTab::RefreshAssetListView()
+/*
+	Call RebuildList to ensure AssetListView is always up to date
+*/
 {
 	// ensure clean slate when refreshed
 	CheckBoxesArray.Empty();
@@ -207,6 +225,9 @@ void SAdvancedDeletionTab::RefreshAssetListView()
 #pragma region RowsInListView
 
 TSharedRef<ITableRow> SAdvancedDeletionTab::OnGenerateRowForListView(TSharedPtr<FAssetData> AssetDataToDisplay, const TSharedRef<STableViewBase>& OwnerTable)
+/*
+	Generate a STableRow for every asset and define child layout and widgets for each row
+*/
 {
 	// check if AssetData is valid
 	if (!AssetDataToDisplay.IsValid()) return SNew(STableRow<TSharedPtr<FAssetData>>, OwnerTable);
@@ -262,6 +283,9 @@ TSharedRef<ITableRow> SAdvancedDeletionTab::OnGenerateRowForListView(TSharedPtr<
 }
 
 TSharedRef<SCheckBox> SAdvancedDeletionTab::ConstructCheckBoxes(const TSharedPtr<FAssetData>& AssetDataToDisplay)
+/*
+	Generate a SCheckBox for each row and add to CheckBoxesArray
+*/
 {
 	TSharedRef<SCheckBox> ConstructedCheckBox =
 		SNew(SCheckBox)
@@ -275,7 +299,7 @@ TSharedRef<SCheckBox> SAdvancedDeletionTab::ConstructCheckBoxes(const TSharedPtr
 
 void SAdvancedDeletionTab::OnCheckBoxStateChanged(ECheckBoxState CheckBoxState, TSharedPtr<FAssetData> ClickedAssetData)
 {
-	// Add or remove assets from delete array based on state
+	// Add or remove assets from delete array based on checkbox state
 	switch (CheckBoxState)
 	{
 	case ECheckBoxState::Unchecked:
@@ -417,7 +441,7 @@ void SAdvancedDeletionTab::AssignButtonClickFns(const FString& ButtonName)
 
 FReply SAdvancedDeletionTab::OnDeleteSelectedButtonClicked()
 /*
-	Delete all assets in CheckedAssetsToDeleteArray
+	Deletes all assets in CheckedAssetsToDeleteArray
 */
 {
 	if (CheckedAssetsToDelete.Num() == 0)

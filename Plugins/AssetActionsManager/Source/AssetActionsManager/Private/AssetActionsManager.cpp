@@ -18,6 +18,10 @@ void FAssetActionsManagerModule::StartupModule()
 #pragma region ExtendContentBrowserMenu
 
 void FAssetActionsManagerModule::InitCBMenuExtension()
+/*
+	Initialize Content Browser module and bind extender to add a custom delegate to the existing 
+	array of menu options
+*/
 {
 	// Load CB module
 	FContentBrowserModule& ContentBrowserModule =
@@ -34,18 +38,22 @@ void FAssetActionsManagerModule::InitCBMenuExtension()
 }
 
 TSharedRef<FExtender> FAssetActionsManagerModule::CustomCBMenuExtender(const TArray<FString>& SelectedPaths)
+/*
+	Instance a new FExtender that adds a menu entry by binding to a member function that creates the new entry
+*/
 {
 	TSharedRef<FExtender> MenuExtender(new FExtender());
 
 	if (SelectedPaths.Num() > 0)
 	{
-		MenuExtender->AddMenuExtension(FName("Delete"),
-			EExtensionHook::After,
+		MenuExtender->AddMenuExtension(
+			FName("Delete"), // Existing menu option 
+			EExtensionHook::After, // Position of new entry relative to existing menu option
 			TSharedPtr<FUICommandList>(),
 			FMenuExtensionDelegate::CreateRaw(this, &FAssetActionsManagerModule::AddCBMenuEntry)); // Second delegate bind to member fn
 
 		// Selected Paths is passed in through bind fn which is based on user selection of folder
-		// Create an array and set it to the path that is obtained from this menu action
+		// Set an array to the path that is obtained from this menu action
 		SelectedFolderPaths = SelectedPaths;
 	}
 
@@ -53,17 +61,21 @@ TSharedRef<FExtender> FAssetActionsManagerModule::CustomCBMenuExtender(const TAr
 }
 
 void FAssetActionsManagerModule::AddCBMenuEntry(FMenuBuilder& MenuBuilder)
+/*
+	Utilize MenuBuilder to create a new menu entry and define menu entry properties.
+	Binds to member fn that defines onClick behavior.
+*/
 {
 	MenuBuilder.AddMenuEntry
 	(
 		FText::FromString("Advanced Deletion"), // Name
 		FText::FromString("Search and delete assets under a selected folder"), // ToolTip
 		FSlateIcon(),
-		FExecuteAction::CreateRaw(this, &FAssetActionsManagerModule::OnAdvancedDeleteButtonClicked) // Third delegate bind to member fn
+		FExecuteAction::CreateRaw(this, &FAssetActionsManagerModule::OnAdvancedDeleteMenuEntryClicked) // Third delegate bind to member fn
 	);
 }
 
-void FAssetActionsManagerModule::OnAdvancedDeleteButtonClicked()
+void FAssetActionsManagerModule::OnAdvancedDeleteMenuEntryClicked()
 {
 	// Spawn tab 
 	FGlobalTabmanager::Get()->TryInvokeTab(FName("AdvancedDeletion"));
@@ -82,27 +94,33 @@ void FAssetActionsManagerModule::RegisterAdvancedDeletionTab()
 }
 
 TSharedRef<SDockTab> FAssetActionsManagerModule::OnSpawnAdvancedDeletionTab(const FSpawnTabArgs& AdvancedDeletionTabArgs)
+/*
+	Construct an SDockTab and assign the SLATE_ARGUMENT in the widget to the asset data found in the selected folder
+*/
 {
 	return
 		SNew(SDockTab).TabRole(ETabRole::NomadTab)
 		[
 			SNew(SAdvancedDeletionTab)
-				.AssetsDataFromManager(GetAllAssetDataUnderSelectedFolder())
+				.AssetsDataFromManager(GetAllAssetDataUnderSelectedFolder()) // matches the SLATE_ARGUMENT in widget file
 		];
 }
 
 TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::GetAllAssetDataUnderSelectedFolder()
+/*
+	From selected folder path, list all assets and add to array. For every asset path in the array,
+	find the asset data and return an array of asset data.
+*/
 {
 	TArray<TSharedPtr<FAssetData>> AllAssetsData; // type matches what item source in widget expects
 	TArray<FString> AllAssetsPathsNames;
 
+	// Use List Assets to get all assets paths
 	for (const FString SelectedFolderPath : SelectedFolderPaths)
 	{
 		TArray<FString> AssetsPathNames = UEditorAssetLibrary::ListAssets(SelectedFolderPath);
 		AllAssetsPathsNames.Append(AssetsPathNames);
 	}
-
-	// Use List Assets to get all assets paths
 
 	// Check if selected folder contains assets - might move this to an if check in the widget and display no results
 	if (AllAssetsPathsNames.Num() == 0)
@@ -137,6 +155,10 @@ TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::GetAllAssetDataUnderS
 #pragma region ProcessDataForAdvancedDeletion
 
 bool FAssetActionsManagerModule::DeleteAssetsInList(const TArray<FAssetData>& AssetsToDelete)
+/*
+	Return true if assets were deleted successfully by DeleteAssets fn from ObjectTools
+	Else return false
+*/
 {
 	if (ObjectTools::DeleteAssets(AssetsToDelete) > 0)
 	{
