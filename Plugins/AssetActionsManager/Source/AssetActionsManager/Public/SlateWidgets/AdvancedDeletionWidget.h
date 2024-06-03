@@ -42,8 +42,17 @@ private:
 	FReply OnDeleteButtonClicked(TSharedPtr<FAssetData> ClickedAssetData);
 #pragma endregion
 
+#pragma region ButtonSlot
+	TSharedRef<SButton> ConstructButtonForSlot(const FString& ButtonName);
+	TSharedRef<STextBlock> ConstructTextForButtonSlot(const FString& ButtonName);
+	void OnButtonClicked(const FString& ButtonName);
+	FReply OnDeleteSelectedButtonClicked();
+	FReply OnSelectAllButtonClicked();
+	FReply OnDeselectAllButtonClicked();
 
+#pragma endregion
 
+	FSlateFontInfo SharedTextFont;
 	FSlateFontInfo GetEmbossedFont() const { return FCoreStyle::Get().GetFontStyle(FName("EmbossedText")); }
 
 };

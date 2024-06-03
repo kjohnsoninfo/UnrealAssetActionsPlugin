@@ -6,11 +6,17 @@
 #include "AssetActionsManager.h"
 
 #define LOCTEXT_NAMESPACE "SAdvancedDeletionTab"
+#define DeleteSelected TEXT("Delete Selected")
+#define SelectAll TEXT("Select All")
+#define DeselectAll TEXT("Deselect All")
+
 
 void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 {
 	bCanSupportFocus = true;
 	AssetsDataFromManager = InArgs._AssetsDataFromManager; // set widget data array to data passed in from manager
+	SharedTextFont = GetEmbossedFont();
+	SharedTextFont.Size = 12;
 
 	ChildSlot
 		[
@@ -87,12 +93,26 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 
 				// Delete Selected 
 				+ SHorizontalBox::Slot()
+				.FillWidth(10.f)
+				.Padding(5.f)
+				[
+					ConstructButtonForSlot(DeleteSelected)
+				]
 
 				// Select All
 				+ SHorizontalBox::Slot()
-
+				.FillWidth(10.f)
+				.Padding(5.f)
+				[
+					ConstructButtonForSlot(SelectAll)
+				]
 				// Deselect All
 				+ SHorizontalBox::Slot()
+				.FillWidth(10.f)
+				.Padding(5.f)
+				[
+					ConstructButtonForSlot(DeselectAll)
+				]
 			]
 
 		];
@@ -102,13 +122,10 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 
 TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTitleTextForTab(const FString& TitleText)
 {
-	FSlateFontInfo TextFont = GetEmbossedFont();
-	TextFont.Size = 10;
-
 	TSharedRef<STextBlock> ConstructedTextBlock =
 		SNew(STextBlock)
 		.Text(FText::FromString(TitleText))
-		.Font(TextFont)
+		.Font(SharedTextFont)
 		.Justification(ETextJustify::Left)
 		.Margin(FMargin(10.f))
 		.ColorAndOpacity(FColor::White);
@@ -235,13 +252,10 @@ TSharedRef<ITableRow> SAdvancedDeletionTab::OnGenerateRowForListView(TSharedPtr<
 
 TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTextForRow(const FString& RowText)
 {
-	FSlateFontInfo TextFont = GetEmbossedFont();
-	TextFont.Size = 10;
-
 	TSharedRef<STextBlock> ConstructedTextBlock =
 		SNew(STextBlock)
 		.Text(FText::FromString(RowText))
-		.Font(TextFont)
+		.Font(SharedTextFont)
 		.ColorAndOpacity(FColor::White);
 
 	return ConstructedTextBlock;
@@ -251,8 +265,9 @@ TSharedRef<SButton> SAdvancedDeletionTab::ConstructDeleteButtonForRow(const TSha
 {
 	TSharedRef<SButton> ConstructedDeleteButton = 
 		SNew(SButton)
-		.Text(FText::FromString(TEXT("Delete")))
 		.OnClicked(this, &SAdvancedDeletionTab::OnDeleteButtonClicked, AssetDataToDisplay);
+
+	ConstructedDeleteButton->SetContent(ConstructTextForRow(TEXT("Delete")));
 
 	return ConstructedDeleteButton;
 }
@@ -281,6 +296,74 @@ FReply SAdvancedDeletionTab::OnDeleteButtonClicked(TSharedPtr<FAssetData> Clicke
 		RefreshAssetListView();
 	}
 
+	return FReply::Handled();
+}
+
+#pragma endregion
+
+#pragma region ButtonSlot
+
+TSharedRef<SButton> SAdvancedDeletionTab::ConstructButtonForSlot(const FString& ButtonName)
+{
+	TSharedRef<SButton> ConstructedSlotButton =
+		SNew(SButton)
+		.ContentPadding(FMargin(5.f));
+
+	ConstructedSlotButton->SetContent(ConstructTextForButtonSlot(ButtonName));
+
+	ConstructedSlotButton->SetOnClicked(FOnClicked::CreateLambda([this, ButtonName]()
+		{
+			OnButtonClicked(ButtonName);
+			return FReply::Handled();
+		}
+	));
+
+	return ConstructedSlotButton;
+}
+
+TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTextForButtonSlot(const FString& ButtonName)
+{
+
+	TSharedRef<STextBlock> ConstructedTextForButtonSlot =
+		SNew(STextBlock)
+		.Text(FText::FromString(ButtonName))
+		.Font(SharedTextFont)
+		.Justification(ETextJustify::Center);
+
+	return ConstructedTextForButtonSlot;
+}
+
+void SAdvancedDeletionTab::OnButtonClicked(const FString& ButtonName)
+{
+	if (ButtonName == DeleteSelected)
+	{
+		OnDeleteSelectedButtonClicked();
+	}
+	else if (ButtonName == SelectAll)
+	{
+		OnSelectAllButtonClicked();
+	}
+	if (ButtonName == DeselectAll)
+	{
+		OnDeselectAllButtonClicked();
+	}
+}
+
+FReply SAdvancedDeletionTab::OnDeleteSelectedButtonClicked()
+{
+	DebugHelper::Print(TEXT("Delete All"));
+	return FReply::Handled();
+}
+
+FReply SAdvancedDeletionTab::OnSelectAllButtonClicked()
+{
+	DebugHelper::Print(TEXT("Select All"));
+	return FReply::Handled();
+}
+
+FReply SAdvancedDeletionTab::OnDeselectAllButtonClicked()
+{
+	DebugHelper::Print(TEXT("deSelect All"));
 	return FReply::Handled();
 }
 
