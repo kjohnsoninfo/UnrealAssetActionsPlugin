@@ -18,6 +18,10 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 	SharedTextFont = GetEmbossedFont();
 	SharedTextFont.Size = 12;
 
+	// Ensure clean slate when constructed
+	CheckBoxesArray.Empty();
+	CheckedAssetsToDelete.Empty();
+
 	ChildSlot
 		[
 			// Parent box to hold all interior widgets
@@ -267,25 +271,20 @@ TSharedRef<SCheckBox> SAdvancedDeletionTab::ConstructCheckBoxes(const TSharedPtr
 
 void SAdvancedDeletionTab::OnCheckBoxStateChanged(ECheckBoxState CheckBoxState, TSharedPtr<FAssetData> ClickedAssetData)
 {
+	// Add or remove assets from delete array based on state
 	switch (CheckBoxState)
 	{
 	case ECheckBoxState::Unchecked:
 
-		//if (CheckedAssetsToDelete.Contains(ClickedAssetData))
-		//{
-		//	CheckedAssetsToDelete.Remove(ClickedAssetData);
-		//}
-
-		DebugHelper::Print(ClickedAssetData->AssetName.ToString() + TEXT(" is unchecked"));
+		if (CheckedAssetsToDelete.Contains(ClickedAssetData))
+		{
+			CheckedAssetsToDelete.Remove(ClickedAssetData);
+		}
 
 		break;
 	case ECheckBoxState::Checked:
-		//if (CheckedAssetsToDelete.Contains(ClickedAssetData))
-		//{
-		//	CheckedAssetsToDelete.Add(ClickedAssetData);
-		//}
 
-		DebugHelper::Print(ClickedAssetData->AssetName.ToString() + TEXT(" is checked"));
+		CheckedAssetsToDelete.AddUnique(ClickedAssetData);
 
 		break;
 	case ECheckBoxState::Undetermined:
@@ -400,7 +399,41 @@ void SAdvancedDeletionTab::AssignButtonClickFns(const FString& ButtonName)
 
 FReply SAdvancedDeletionTab::OnDeleteSelectedButtonClicked()
 {
-	DebugHelper::Print(TEXT("Delete All"));
+	if (CheckedAssetsToDelete.Num() == 0)
+	{
+		DebugHelper::MessageDialogBox(EAppMsgType::Ok, TEXT("No assets selected."));
+		return FReply::Handled();
+	}
+
+	// Convert array of ptr to array of FAssetData for delete fn
+	TArray<FAssetData> AssetsToDelete;
+		
+	for (const TSharedPtr<FAssetData>& AssetData : CheckedAssetsToDelete)
+	{
+		AssetsToDelete.Add(*AssetData.Get());
+	}
+
+	// Load manager module
+	FAssetActionsManagerModule& AssetActionsManager =
+		FModuleManager::LoadModuleChecked<FAssetActionsManagerModule>(TEXT("AssetActionsManager"));
+
+	// Call delete fn from manager module passing in the checked data
+	bool bAssetDeleted = AssetActionsManager.DeleteAssetsInList(AssetsToDelete);
+
+	// Remove from list view if asset was deleted
+	if (bAssetDeleted)
+	{
+		for (const TSharedPtr<FAssetData>& DeletedAsset : CheckedAssetsToDelete)
+		{
+			if (AssetsDataFromManager.Contains(DeletedAsset))
+			{
+				AssetsDataFromManager.Remove(DeletedAsset);
+			}
+		}
+
+		RefreshAssetListView();
+	}
+
 	return FReply::Handled();
 }
 
