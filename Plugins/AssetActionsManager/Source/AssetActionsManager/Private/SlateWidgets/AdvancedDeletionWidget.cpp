@@ -299,6 +299,9 @@ void SAdvancedDeletionTab::OnCheckBoxStateChanged(ECheckBoxState CheckBoxState, 
 }
 
 TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTextForRow(const FString& RowText)
+/*
+	Common function to construct any textblocks for rows in the list view
+*/
 {
 	TSharedRef<STextBlock> ConstructedTextBlock =
 		SNew(STextBlock)
@@ -310,6 +313,9 @@ TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTextForRow(const FString& 
 }
 
 TSharedRef<SButton> SAdvancedDeletionTab::ConstructDeleteButtonForRow(const TSharedPtr<FAssetData>& AssetDataToDisplay)
+/*
+	Construct delete button that deletes a single asset for each row in the list view
+*/
 {
 	TSharedRef<SButton> ConstructedDeleteButton = 
 		SNew(SButton)
@@ -320,7 +326,10 @@ TSharedRef<SButton> SAdvancedDeletionTab::ConstructDeleteButtonForRow(const TSha
 	return ConstructedDeleteButton;
 }
 
-FReply SAdvancedDeletionTab::OnDeleteButtonClicked(TSharedPtr<FAssetData> ClickedAssetData) // ClickedData = AssetDataToDisplay for the selected row
+FReply SAdvancedDeletionTab::OnDeleteButtonClicked(TSharedPtr<FAssetData> ClickedAssetData) 
+/*
+	Delete a single asset by passing in AssetDataToDisplay for the clicked row
+*/
 {
 	// Add single asset to array since ObjectTools::Delete expects an array
 	TArray<FAssetData> AssetToDelete;
@@ -352,6 +361,9 @@ FReply SAdvancedDeletionTab::OnDeleteButtonClicked(TSharedPtr<FAssetData> Clicke
 #pragma region ButtonSlot
 
 TSharedRef<SButton> SAdvancedDeletionTab::ConstructButtonForSlot(const FString& ButtonName)
+/*
+	Common function to construct buttons in the button slot
+*/
 {
 	TSharedRef<SButton> ConstructedSlotButton =
 		SNew(SButton)
@@ -378,14 +390,17 @@ TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTextForButtonSlot(const FS
 		SNew(STextBlock)
 		.Text(FText::FromString(ButtonName))
 		.Font(SharedTextFont)
-		.Justification(ETextJustify::Center);
+		.Justification(ETextJustify::Center)
+		.ColorAndOpacity(FColor::White);
 
 	return ConstructedTextForButtonSlot;
 }
 
 void SAdvancedDeletionTab::AssignButtonClickFns(const FString& ButtonName)
+/*
+	Assign the different onClicked fns to each button based on button name
+*/
 {
-	// link specific onClicked fn to each button based on button name
 	if (ButtonName == DeleteSelected)
 	{
 		OnDeleteSelectedButtonClicked();
@@ -444,12 +459,14 @@ FReply SAdvancedDeletionTab::OnDeleteSelectedButtonClicked()
 }
 
 FReply SAdvancedDeletionTab::OnSelectAllButtonClicked()
+/*
+	Check state of checkboxes in CheckBoxesArray and toggle to checked if not already checked
+*/
 {
 	if (CheckBoxesArray.Num() == 0) return FReply::Handled();
 
 	for (const TSharedRef<SCheckBox> CheckBox : CheckBoxesArray)
 	{
-		// if not already checked, toggle state to checked
 		if (!CheckBox->IsChecked())
 		{
 			CheckBox->ToggleCheckedState();
@@ -460,12 +477,14 @@ FReply SAdvancedDeletionTab::OnSelectAllButtonClicked()
 }
 
 FReply SAdvancedDeletionTab::OnDeselectAllButtonClicked()
+/*
+	Check state of checkboxes in CheckBoxesArray and toggle to unchecked if already checked
+*/
 {
 	if (CheckBoxesArray.Num() == 0) return FReply::Handled();
 
 	for (const TSharedRef<SCheckBox> CheckBox : CheckBoxesArray)
 	{
-		// if already checked, toggle state to unchecked
 		if (CheckBox->IsChecked())
 		{
 			CheckBox->ToggleCheckedState();
