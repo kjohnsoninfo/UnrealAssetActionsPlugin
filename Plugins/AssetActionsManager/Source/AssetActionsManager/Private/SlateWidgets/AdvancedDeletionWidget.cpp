@@ -218,6 +218,9 @@ TSharedRef<ITableRow> SAdvancedDeletionTab::OnGenerateRowForListView(TSharedPtr<
 
 				// First slot for checkbox
 				+ SHorizontalBox::Slot()
+				[
+					ConstructCheckBoxes(AssetDataToDisplay)
+				]
 
 				// Second slot for asset name
 				+ SHorizontalBox::Slot()
@@ -248,6 +251,48 @@ TSharedRef<ITableRow> SAdvancedDeletionTab::OnGenerateRowForListView(TSharedPtr<
 		];
 
 		return RowWidgetForListView;
+}
+
+TSharedRef<SCheckBox> SAdvancedDeletionTab::ConstructCheckBoxes(const TSharedPtr<FAssetData>& AssetDataToDisplay)
+{
+	TSharedRef<SCheckBox> ConstructedCheckBox =
+		SNew(SCheckBox)
+		.Type(ESlateCheckBoxType::CheckBox)
+		.OnCheckStateChanged(this, &SAdvancedDeletionTab::OnCheckBoxStateChanged, AssetDataToDisplay);
+
+	CheckBoxesArray.Add(ConstructedCheckBox);
+
+	return ConstructedCheckBox;
+}
+
+void SAdvancedDeletionTab::OnCheckBoxStateChanged(ECheckBoxState CheckBoxState, TSharedPtr<FAssetData> ClickedAssetData)
+{
+	switch (CheckBoxState)
+	{
+	case ECheckBoxState::Unchecked:
+
+		//if (CheckedAssetsToDelete.Contains(ClickedAssetData))
+		//{
+		//	CheckedAssetsToDelete.Remove(ClickedAssetData);
+		//}
+
+		DebugHelper::Print(ClickedAssetData->AssetName.ToString() + TEXT(" is unchecked"));
+
+		break;
+	case ECheckBoxState::Checked:
+		//if (CheckedAssetsToDelete.Contains(ClickedAssetData))
+		//{
+		//	CheckedAssetsToDelete.Add(ClickedAssetData);
+		//}
+
+		DebugHelper::Print(ClickedAssetData->AssetName.ToString() + TEXT(" is checked"));
+
+		break;
+	case ECheckBoxState::Undetermined:
+		break;
+	default:
+		break;
+	}
 }
 
 TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTextForRow(const FString& RowText)
@@ -309,11 +354,14 @@ TSharedRef<SButton> SAdvancedDeletionTab::ConstructButtonForSlot(const FString& 
 		SNew(SButton)
 		.ContentPadding(FMargin(5.f));
 
+	// Set content through a common fn
 	ConstructedSlotButton->SetContent(ConstructTextForButtonSlot(ButtonName));
 
+	// Create lamda function to pass in on clicked function based on button name
+	// This allows a single function to construct the button but on clicked action is different
 	ConstructedSlotButton->SetOnClicked(FOnClicked::CreateLambda([this, ButtonName]()
 		{
-			OnButtonClicked(ButtonName);
+			AssignButtonClickFns(ButtonName);
 			return FReply::Handled();
 		}
 	));
@@ -333,8 +381,9 @@ TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTextForButtonSlot(const FS
 	return ConstructedTextForButtonSlot;
 }
 
-void SAdvancedDeletionTab::OnButtonClicked(const FString& ButtonName)
+void SAdvancedDeletionTab::AssignButtonClickFns(const FString& ButtonName)
 {
+	// link specific onClicked fn to each button based on button name
 	if (ButtonName == DeleteSelected)
 	{
 		OnDeleteSelectedButtonClicked();
@@ -343,7 +392,7 @@ void SAdvancedDeletionTab::OnButtonClicked(const FString& ButtonName)
 	{
 		OnSelectAllButtonClicked();
 	}
-	if (ButtonName == DeselectAll)
+	else if (ButtonName == DeselectAll)
 	{
 		OnDeselectAllButtonClicked();
 	}
