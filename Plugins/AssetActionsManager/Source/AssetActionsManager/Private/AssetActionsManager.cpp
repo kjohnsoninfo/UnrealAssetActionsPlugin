@@ -6,6 +6,7 @@
 #include "SlateWidgets/AdvancedDeletionWidget.h"
 #include "EditorAssetLibrary.h"
 #include "ObjectTools.h"
+#include "AssetToolsModule.h"
 #include "AssetViewUtils.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 
@@ -79,13 +80,60 @@ void FAssetActionsManagerModule::AddCBMenuEntry(FMenuBuilder& MenuBuilder)
 
 void FAssetActionsManagerModule::OnAdvancedDeleteMenuEntryClicked()
 {
+	// Fix up redirectors if needed
+	FixUpRedirectors();
+
 	// Spawn tab 
 	FGlobalTabmanager::Get()->TryInvokeTab(FName("AdvancedDeletion"));
 }
 
 void FAssetActionsManagerModule::FixUpRedirectors()
 {
+	// Load module
+	IAssetRegistry& AssetRegistry =
+		FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
+
+	// Create filter with asset paths
+	FARFilter Filter;
+	Filter.bRecursivePaths = true;
+	Filter.PackagePaths.Emplace("/Game");
+	Filter.ClassPaths.Add(UObjectRedirector::StaticClass()->GetClassPathName());
+
+	// Query for assets in selected paths
+	TArray<FAssetData> AssetList;
+	AssetRegistry.GetAssets(Filter, AssetList);
+
+	if (AssetList.Num() == 0) return;
+
+	// Get paths for each asset
+	TArray<FString> ObjectPaths;
+
+	for (const FAssetData& Asset : AssetList)
+	{
+		ObjectPaths.Add(Asset.GetObjectPathString());
+	}
+
+	// Load assets
+	TArray<UObject*> Objects;
+	bool Result = AssetViewUtils::LoadAssetsIfNeeded(ObjectPaths, Objects, true, true);
+
+	if (Result)
+	{
+		// Convert objects to object redirectors
+		TArray<UObjectRedirector*> Redirectors;
+		for (UObject* Object : Objects)
+		{
+			Redirectors.Add(CastChecked<UObjectRedirector>(Object));
+		}
+
+		// Call fix up redirectors from asset tools
+		FAssetToolsModule& AssetToolsModule =
+			FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
+
+		AssetToolsModule.Get().FixupReferencers(Redirectors);
+	}
 }
+
 #pragma endregion
 
 #pragma region AdvancedDeletionTab
