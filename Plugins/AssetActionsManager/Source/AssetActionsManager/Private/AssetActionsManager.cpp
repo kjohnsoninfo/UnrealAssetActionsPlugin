@@ -205,7 +205,7 @@ TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::GetAllAssetDataUnderS
 
 #pragma endregion
 
-#pragma region ProcessDataForAdvancedDeletion
+#pragma region ProcessDataForWidget
 
 bool FAssetActionsManagerModule::DeleteAssetsInList(const TArray<FAssetData>& AssetsToDelete)
 /*

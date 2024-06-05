@@ -13,7 +13,7 @@ public:
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
 
-#pragma region ProcessDataForAdvancedDeletion
+#pragma region ProcessDataForWidget
 
 	/** Delete assets marked for deletion by the user widget 
 	* 
@@ -63,6 +63,7 @@ private:
 	/** Spawn tab when the Advanced Deletion menu entry is clicked */
 	void OnAdvancedDeleteMenuEntryClicked();
 
+	/** Fix up redirectors when tab is spawned to ensure asset file paths are accurate */
 	void FixUpRedirectors();
 #pragma endregion
 

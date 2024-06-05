@@ -41,6 +41,14 @@ private:
 
 #pragma endregion
 
+#pragma region FilterSlot
+
+	/** Construct Refresh Button that allows a user to manually refresh the asset list view */
+	TSharedRef<SButton> ConstructRefreshButton();
+	FReply OnRefreshButtonClicked();
+#pragma endregion
+
+
 #pragma region ListView
 	
 	/**

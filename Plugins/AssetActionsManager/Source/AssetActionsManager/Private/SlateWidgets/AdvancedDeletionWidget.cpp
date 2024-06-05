@@ -73,6 +73,15 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 
 				// Filter
 				+ SHorizontalBox::Slot()
+
+				// Manual Refresh
+				+ SHorizontalBox::Slot()
+				.HAlign(HAlign_Right)
+				.VAlign(VAlign_Top)
+				.Padding(5.f)
+				[
+					ConstructRefreshButton()
+				]
 			]
 
 			// Third slot for list view
@@ -183,6 +192,38 @@ FReply SAdvancedDeletionTab::OnHelpButtonClicked()
 	const FString& HelpUrl = "https://www.unrealengine.com/en-US"; 
 	FPlatformProcess::LaunchURL(*HelpUrl, NULL, NULL);
 	
+	return FReply::Handled();
+}
+
+TSharedRef<SButton> SAdvancedDeletionTab::ConstructRefreshButton()
+/*
+	Construct a refresh button that calls refresh asset list view fn
+*/
+{
+	TSharedRef<SButton> ConstructedRefreshButton =
+		SNew(SButton)
+		.ButtonStyle(FAppStyle::Get(), "SimpleButton")
+		.ToolTipText(LOCTEXT("RefreshBtnToolTip", "Refresh asset list view"))
+		.ContentPadding(FMargin(5.f))
+
+		.OnClicked(this, &SAdvancedDeletionTab::OnRefreshButtonClicked)
+		[
+			SNew(SImage)
+				.ColorAndOpacity(FSlateColor::UseForeground())
+				.Image(FAppStyle::Get().GetBrush("Icons.Refresh"))
+		];
+
+
+	return ConstructedRefreshButton;
+}
+
+FReply SAdvancedDeletionTab::OnRefreshButtonClicked()
+/*
+	When refresh button is clicked, refresh asset list view
+*/
+{
+	RefreshAssetListView();
+	DebugHelper::NotificationPopup("Asset List View Refreshed");
 	return FReply::Handled();
 }
 
