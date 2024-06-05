@@ -4,6 +4,7 @@
 #include "SlateWidgets/AdvancedDeletionWidget.h"
 #include "DebugHelper.h"
 #include "AssetActionsManager.h"
+#include "EditorAssetLibrary.h"
 
 #define LOCTEXT_NAMESPACE "SAdvancedDeletionTab"
 #define DeleteSelected TEXT("Delete Selected")
@@ -17,7 +18,16 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 */
 {
 	bCanSupportFocus = true;
-	AssetsDataFromManager = InArgs._AssetsDataFromManager; // set widget data array to data passed in from manager
+	AllAssetsDataFromManager = InArgs._AllAssetsDataFromManager; // set widget data array to data passed in from manager
+	DisplayedAssetsData = AllAssetsDataFromManager;
+
+	//// Load manager module
+	//FAssetActionsManagerModule& AssetActionsManager =
+	//	FModuleManager::LoadModuleChecked<FAssetActionsManagerModule>(TEXT("AssetActionsManager"));
+
+	//// Call delete fn from manager module passing in the checked data
+	//DisplayedAssetsData = AssetActionsManager.FilterForUnusedAssetData(AllAssetsDataFromManager);
+
 	SharedTextFont = GetEmbossedFont();
 	SharedTextFont.Size = 12;
 
@@ -188,7 +198,7 @@ TSharedRef<SListView<TSharedPtr<FAssetData>>> SAdvancedDeletionTab::ConstructAss
 	ConstructedAssetListView =
 		SNew(SListView<TSharedPtr<FAssetData>>)
 		.ItemHeight(24.f) // height of each row
-		.ListItemsSource(&AssetsDataFromManager) // pointer to array of source items
+		.ListItemsSource(&DisplayedAssetsData) // pointer to array of source items
 		.OnGenerateRow(this, &SAdvancedDeletionTab::OnGenerateRowForListView) // create row for every asset found
 		.HeaderRow
 		(
@@ -236,6 +246,13 @@ TSharedRef<ITableRow> SAdvancedDeletionTab::OnGenerateRowForListView(TSharedPtr<
 	const FString AssetName = AssetDataToDisplay->AssetName.ToString();
 	const FString AssetClass = AssetDataToDisplay->GetClass()->GetName();
 	const FString AssetParentFolder = AssetDataToDisplay->PackagePath.ToString();
+	
+	// Load manager module
+	FAssetActionsManagerModule& AssetActionsManager =
+		FModuleManager::LoadModuleChecked<FAssetActionsManagerModule>(TEXT("AssetActionsManager"));
+
+	// Call referencer count fn
+	const FString AssetRefCount = FString::FromInt(AssetActionsManager.GetAssetReferencersCount(AssetDataToDisplay));
 
 	// return a ref to a table row to the OnGenerateRow fn
 	TSharedRef<STableRow<TSharedPtr<FAssetData>>> RowWidgetForListView =
@@ -247,32 +264,49 @@ TSharedRef<ITableRow> SAdvancedDeletionTab::OnGenerateRowForListView(TSharedPtr<
 
 				// First slot for checkbox
 				+ SHorizontalBox::Slot()
+				.HAlign(HAlign_Left)
+				.VAlign(VAlign_Center)
+				.FillWidth(.1f)
 				[
 					ConstructCheckBoxes(AssetDataToDisplay)
 				]
 
 				// Second slot for asset name
 				+ SHorizontalBox::Slot()
+				.HAlign(HAlign_Center)
+				.VAlign(VAlign_Center)
 				[
 					ConstructTextForRow(AssetName)
 				]
+
 				// Third slot for asset class
 				+ SHorizontalBox::Slot()
+				.HAlign(HAlign_Center)
+				.VAlign(VAlign_Center)
 				[
 					ConstructTextForRow(AssetClass)
 				]
 
 				// Fourth slot for parent folder path
 				+ SHorizontalBox::Slot()
+				.HAlign(HAlign_Center)
+				.VAlign(VAlign_Center)
 				[
 					ConstructTextForRow(AssetParentFolder)
 				]
 
-				// Fifth slot for single deletion
+				// Fifth slot for asset referencer count
+				+ SHorizontalBox::Slot()
+				.HAlign(HAlign_Center)
+				.VAlign(VAlign_Center)
+				[
+					ConstructTextForRow(AssetRefCount)
+				]
+
+				// Sixth slot for single deletion
 				+ SHorizontalBox::Slot()
 				.HAlign(HAlign_Right)
 				.VAlign(VAlign_Fill)
-				.FillWidth(.5f)
 				[
 					ConstructDeleteButtonForRow(AssetDataToDisplay)
 				]
@@ -369,9 +403,9 @@ FReply SAdvancedDeletionTab::OnDeleteButtonClicked(TSharedPtr<FAssetData> Clicke
 	// Remove from list view if asset was deleted
 	if (bAssetDeleted)
 	{
-		if (AssetsDataFromManager.Contains(ClickedAssetData))
+		if (DisplayedAssetsData.Contains(ClickedAssetData))
 		{
-			AssetsDataFromManager.Remove(ClickedAssetData);
+			DisplayedAssetsData.Remove(ClickedAssetData);
 		}
 
 		RefreshAssetListView();
@@ -470,9 +504,9 @@ FReply SAdvancedDeletionTab::OnDeleteSelectedButtonClicked()
 	{
 		for (const TSharedPtr<FAssetData>& DeletedAsset : CheckedAssetsToDelete)
 		{
-			if (AssetsDataFromManager.Contains(DeletedAsset))
+			if (DisplayedAssetsData.Contains(DeletedAsset))
 			{
-				AssetsDataFromManager.Remove(DeletedAsset);
+				DisplayedAssetsData.Remove(DeletedAsset);
 			}
 		}
 

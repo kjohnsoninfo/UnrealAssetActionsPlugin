@@ -6,6 +6,8 @@
 #include "SlateWidgets/AdvancedDeletionWidget.h"
 #include "EditorAssetLibrary.h"
 #include "ObjectTools.h"
+#include "AssetViewUtils.h"
+#include "AssetRegistry/AssetRegistryModule.h"
 
 #define LOCTEXT_NAMESPACE "FAssetActionsManagerModule"
 
@@ -81,6 +83,9 @@ void FAssetActionsManagerModule::OnAdvancedDeleteMenuEntryClicked()
 	FGlobalTabmanager::Get()->TryInvokeTab(FName("AdvancedDeletion"));
 }
 
+void FAssetActionsManagerModule::FixUpRedirectors()
+{
+}
 #pragma endregion
 
 #pragma region AdvancedDeletionTab
@@ -102,7 +107,7 @@ TSharedRef<SDockTab> FAssetActionsManagerModule::OnSpawnAdvancedDeletionTab(cons
 		SNew(SDockTab).TabRole(ETabRole::NomadTab)
 		[
 			SNew(SAdvancedDeletionTab)
-				.AssetsDataFromManager(GetAllAssetDataUnderSelectedFolder()) // matches the SLATE_ARGUMENT in widget file
+				.AllAssetsDataFromManager(GetAllAssetDataUnderSelectedFolder()) // matches the SLATE_ARGUMENT in widget file
 		];
 }
 
@@ -166,6 +171,32 @@ bool FAssetActionsManagerModule::DeleteAssetsInList(const TArray<FAssetData>& As
 	}
 
 	return false;
+}
+
+int32 FAssetActionsManagerModule::GetAssetReferencersCount(const TSharedPtr<FAssetData>& AssetData)
+{
+	TArray<FString> AssetReferencers =
+		UEditorAssetLibrary::FindPackageReferencersForAsset(AssetData->ObjectPath.ToString());
+
+	return AssetReferencers.Num();
+}
+
+TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::FilterForUnusedAssetData(const TArray<TSharedPtr<FAssetData>>& AssetDataToFilter)
+/*
+	List unsused assets by checking count of asset referencers for all assets under selected folder 
+*/
+{
+	TArray<TSharedPtr<FAssetData>> UnusedAssetsData;
+
+	for (const TSharedPtr<FAssetData>& AssetData : AssetDataToFilter)
+	{
+		if (GetAssetReferencersCount(AssetData) == 0)
+		{
+			UnusedAssetsData.Add(AssetData);
+		}
+	}
+
+	return UnusedAssetsData;
 }
 
 #pragma endregion

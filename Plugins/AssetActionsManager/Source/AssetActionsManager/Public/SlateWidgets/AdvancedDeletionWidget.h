@@ -16,7 +16,7 @@ class SAdvancedDeletionTab : public SCompoundWidget
 		 * 
 		 * The type must match what the ListItemSource fn in ConstructAssetListView expects.
 		 */
-		SLATE_ARGUMENT(TArray<TSharedPtr<FAssetData>>, AssetsDataFromManager) 
+		SLATE_ARGUMENT(TArray<TSharedPtr<FAssetData>>, AllAssetsDataFromManager) 
 
 	SLATE_END_ARGS()
 
@@ -63,7 +63,12 @@ private:
 	/** Array to hold all asset data passed in by the AssetActionsManager
 	* @note: This is assigned to the InArgs of the Construct fn.
 	*/
-	TArray<TSharedPtr<FAssetData>> AssetsDataFromManager;
+	TArray<TSharedPtr<FAssetData>> AllAssetsDataFromManager;
+
+	/** Array to hold all asset data displayed in the list view
+	* @note: This is passed in as the list item source
+	*/
+	TArray<TSharedPtr<FAssetData>> DisplayedAssetsData;
 
 	/** Array to hold all constructed CheckBoxes when widget is constructed
 	* @note: The size of this array is dependent on the number of assets in the selected folder

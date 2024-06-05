@@ -15,7 +15,7 @@ public:
 
 #pragma region ProcessDataForAdvancedDeletion
 
-	/** Delete assets passed in for deletion by the user widget 
+	/** Delete assets marked for deletion by the user widget 
 	* 
 	* @return bool: returns true when function successfully deletes an asset, else returns false
 	* 
@@ -23,6 +23,18 @@ public:
 	*		 based on whether or not assets were deleted.
 	*/
 	bool DeleteAssetsInList(const TArray<FAssetData>& AssetsToDelete);
+
+	/** Get unused assets by filtering all assets
+	*
+	* @param AssetDataToFilter: array of assets to filter on
+	*/
+	TArray<TSharedPtr<FAssetData>> FilterForUnusedAssetData(const TArray<TSharedPtr<FAssetData>>& AssetDataToFilter);
+
+	/** Get count of all asset referencers
+	*
+	* @param AssetData: asset to get referencer count for
+	*/
+	int32 GetAssetReferencersCount(const TSharedPtr<FAssetData>& AssetData);
 
 #pragma endregion
 
@@ -51,6 +63,7 @@ private:
 	/** Spawn tab when the Advanced Deletion menu entry is clicked */
 	void OnAdvancedDeleteMenuEntryClicked();
 
+	void FixUpRedirectors();
 #pragma endregion
 
 #pragma region AdvancedDeletionTab
