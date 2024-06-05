@@ -30,7 +30,7 @@ public class AssetActionsManager : ModuleRules
 				"InputCore",
 				"EditorScriptingUtilities",
 				"UnrealEd",
-				"AssetTools"
+				"AssetTools",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

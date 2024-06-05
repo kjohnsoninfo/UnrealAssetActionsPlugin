@@ -195,8 +195,13 @@ TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::GetAllAssetDataUnderS
 		// If asset does not exist, skip and move to next asset
 		if (!UEditorAssetLibrary::DoesAssetExist(AssetPathName)) continue;
 
+
 		// Get asset data and add to array to pass to widget
 		FAssetData AssetData = UEditorAssetLibrary::FindAssetData(AssetPathName);
+
+		// Skip level maps
+		if (AssetData.GetClass()->GetName() == TEXT("World")) continue;
+
 		AllAssetsData.Add(MakeShared<FAssetData>(AssetData));
 	}
 
