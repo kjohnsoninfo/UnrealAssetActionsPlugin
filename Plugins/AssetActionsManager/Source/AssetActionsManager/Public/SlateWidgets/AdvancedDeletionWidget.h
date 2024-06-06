@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Widgets/SCompoundWidget.h"
+#include "Widgets/Text/SRichTextBlock.h"
 
 class SAdvancedDeletionTab : public SCompoundWidget
 {
@@ -79,9 +80,6 @@ private:
 	/** Construct SListView to display all assets in selected folder */
 	TSharedRef<SListView<TSharedPtr<FAssetData>>> ConstructAssetListView();
 
-	/** Refresh SListView when an asset is deleted to ensure list is always up to date */
-	void RefreshAssetListView();
-
 #pragma endregion
 
 #pragma region RowsInListView
@@ -112,7 +110,8 @@ private:
 	* @note: AssetDataToDisplay is used to determine the clicked asset data when user 
 	* clicks on a specific row
 	*/
-	TSharedRef<ITableRow> OnGenerateRowForListView(TSharedPtr<FAssetData> AssetDataToDisplay, const TSharedRef<STableViewBase>& OwnerTable);
+	TSharedRef<ITableRow> OnGenerateRowForListView(TSharedPtr<FAssetData> AssetDataToDisplay, 
+		const TSharedRef<STableViewBase>& OwnerTable);
 	
 	/** Construct a checkbox for each row in the list view */
 	TSharedRef<SCheckBox> ConstructCheckBoxes(const TSharedPtr<FAssetData>& AssetDataToDisplay);
@@ -153,13 +152,44 @@ private:
 
 #pragma endregion
 
+#pragma region HelpfulInfoSlot
+
+	/** String containing message displayed for the asset count
+	* @note: this is reassigned when widget is refreshed
+	*/
+	FString AssetCountMsg;
+
+	/**
+	* Pointer to the SRichTextBlock created when widget is constructed
+	*
+	* @note: This allows for text to change dynamically when widget is refreshed
+	*/
+	TSharedPtr<SRichTextBlock> ConstructedAssetCountTextBlock;
+
+	/** Construct rich text block to show the count of displayed assets in the list view */
+	TSharedRef<SRichTextBlock> ConstructTextForAssetCount();
+
+
+#pragma endregion
+
+#pragma region HelperFunctions
+
 	/** Common font that defines shared properties in all textblocks for consistency */
 	FSlateFontInfo SharedTextFont;
 
+	/** Refresh widget to ensure text and list view are always up to date */
+	void RefreshWidget();
+
+	/** Helper function to remove asset data from arrays when deleted */
 	void EnsureAssetDeletionFromLists(const TSharedPtr<FAssetData>& AssetDataToDelete);
 
 	/** Helper function to get UE Embossed font style */
 	FSlateFontInfo GetEmbossedFont() const { return FCoreStyle::Get().GetFontStyle(FName("EmbossedText")); }
+
+	/** Helper function to get asset count message since it is dynamically reassigned based on displayed assets */
+	FString GetAssetCountMsg() const { return FString::FromInt(DisplayedAssetsData.Num()) + TEXT(" assets"); }
+
+#pragma endregion
 
 };
 

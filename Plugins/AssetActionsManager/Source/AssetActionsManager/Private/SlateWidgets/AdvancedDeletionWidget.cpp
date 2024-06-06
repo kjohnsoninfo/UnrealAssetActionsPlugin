@@ -26,6 +26,8 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 	SharedTextFont = GetEmbossedFont();
 	SharedTextFont.Size = 12;
 
+	AssetCountMsg = GetAssetCountMsg();
+
 	// Ensure clean slate when constructed
 	CheckBoxesArray.Empty();
 	CheckedAssetsToDelete.Empty();
@@ -111,6 +113,9 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 
 				// Number of assets in list
 				+ SHorizontalBox::Slot()
+				[
+					ConstructTextForAssetCount()
+				]
 
 				// Current folder path
 				+ SHorizontalBox::Slot()
@@ -205,7 +210,9 @@ FReply SAdvancedDeletionTab::OnHelpButtonClicked()
 #pragma region FilterSlot
 
 TSharedRef<SComboBox<TSharedPtr<FString>>> SAdvancedDeletionTab::ConstructFilterComboBox()
-/** Construct a combo box that contains and applies criteria to filter list view */
+/* 
+	Construct a combo box that contains and applies criteria to filter list view 
+*/
 {
 	TSharedRef<SComboBox<TSharedPtr<FString>>> ConstructedComboBox =
 		SNew(SComboBox<TSharedPtr<FString>>)
@@ -222,7 +229,9 @@ TSharedRef<SComboBox<TSharedPtr<FString>>> SAdvancedDeletionTab::ConstructFilter
 }
 
 TSharedRef<SWidget> SAdvancedDeletionTab::OnGenerateFilterItem(TSharedPtr<FString> FilterItem)
-/** Construct a TextBlock for every filter item in the FilterListItems to display as options */
+/*
+	Construct a TextBlock for every filter item in the FilterListItems to display as options 
+*/
 {
 	TSharedRef<STextBlock> ConstructedFilterTextBlock =
 		SNew(STextBlock)
@@ -231,9 +240,12 @@ TSharedRef<SWidget> SAdvancedDeletionTab::OnGenerateFilterItem(TSharedPtr<FStrin
 	return ConstructedFilterTextBlock;
 }
 
-// OnSelectionChange requires a selectinfo parameter (see SComboBox.h from source)
+// 
 void SAdvancedDeletionTab::OnFilterSelectionChanged(TSharedPtr<FString> SelectedFilter, ESelectInfo::Type InSelectInfo)
-/** Update ComboBox text and call appropriate filtering functions based on the user selected filter option */
+/* 
+	Update ComboBox text and call appropriate filtering functions based on the user selected filter option 
+	@note: OnSelectionChange requires a selectinfo parameter (see SComboBox.h from source)
+*/
 {
 	const FString SelectedFilterText = *SelectedFilter.Get();
 
@@ -244,7 +256,7 @@ void SAdvancedDeletionTab::OnFilterSelectionChanged(TSharedPtr<FString> Selected
 	if (SelectedFilterText == ListAll)
 	{
 		DisplayedAssetsData = AllAssetsDataFromManager;
-		RefreshAssetListView();
+		RefreshWidget();
 	}
 
 	// Display only unused assets 
@@ -257,7 +269,7 @@ void SAdvancedDeletionTab::OnFilterSelectionChanged(TSharedPtr<FString> Selected
 		// Filter items
 		DisplayedAssetsData = AssetActionsManager.FilterForUnusedAssetData(AllAssetsDataFromManager);
 
-		RefreshAssetListView();
+		RefreshWidget();
 	}
 
 	// Display assets with the same name
@@ -295,7 +307,7 @@ FReply SAdvancedDeletionTab::OnRefreshButtonClicked()
 	When refresh button is clicked, refresh asset list view
 */
 {
-	RefreshAssetListView();
+	RefreshWidget();
 	DebugHelper::NotificationPopup("Asset List View Refreshed");
 	return FReply::Handled();
 }
@@ -328,19 +340,28 @@ TSharedRef<SListView<TSharedPtr<FAssetData>>> SAdvancedDeletionTab::ConstructAss
 	return ConstructedAssetListView.ToSharedRef(); // convert to ref after construction
 }
 
-void SAdvancedDeletionTab::RefreshAssetListView()
+void SAdvancedDeletionTab::RefreshWidget()
 /*
 	Call RebuildList to ensure AssetListView is always up to date
 */
 {
-	// ensure clean slate when refreshed
+	// Ensure clean slate when refreshed
 	CheckBoxesArray.Empty();
 	CheckedAssetsToDelete.Empty();
 
-	// since ptr can be null, check if valid before refresh
+	// Refresh Asset List View
 	if (ConstructedAssetListView.IsValid())
 	{
 		ConstructedAssetListView->RebuildList();
+	}
+
+	// Refresh Asset Count Text
+	AssetCountMsg = GetAssetCountMsg();
+
+	if (ConstructedAssetCountTextBlock.IsValid())
+	{
+		ConstructedAssetCountTextBlock->SetText(FText::FromString(AssetCountMsg));
+		ConstructedAssetCountTextBlock->Refresh();
 	}
 }
 
@@ -519,7 +540,7 @@ FReply SAdvancedDeletionTab::OnDeleteButtonClicked(TSharedPtr<FAssetData> Clicke
 	{
 		EnsureAssetDeletionFromLists(ClickedAssetData);
 
-		RefreshAssetListView();
+		RefreshWidget();
 	}
 
 	return FReply::Handled();
@@ -618,7 +639,7 @@ FReply SAdvancedDeletionTab::OnDeleteSelectedButtonClicked()
 			EnsureAssetDeletionFromLists(DeletedAsset);
 		}
 
-		RefreshAssetListView();
+		RefreshWidget();
 	}
 
 	return FReply::Handled();
@@ -661,6 +682,22 @@ FReply SAdvancedDeletionTab::OnDeselectAllButtonClicked()
 
 #pragma endregion
 
+#pragma region HelpfulInfoSlot
+
+TSharedRef<SRichTextBlock> SAdvancedDeletionTab::ConstructTextForAssetCount()
+{
+	ConstructedAssetCountTextBlock =
+		SNew(SRichTextBlock);
+		
+	ConstructedAssetCountTextBlock->SetText(FText::FromString(AssetCountMsg));
+
+	return ConstructedAssetCountTextBlock.ToSharedRef();
+}
+
+#pragma endregion
+
+#pragma region HelperFunctions
+
 void SAdvancedDeletionTab::EnsureAssetDeletionFromLists(const TSharedPtr<FAssetData>& AssetDataToDelete)
 {
 	if (DisplayedAssetsData.Contains(AssetDataToDelete))
@@ -672,4 +709,6 @@ void SAdvancedDeletionTab::EnsureAssetDeletionFromLists(const TSharedPtr<FAssetD
 	{
 		AllAssetsDataFromManager.Remove(AssetDataToDelete);
 	}
+
+#pragma endregion
 }
