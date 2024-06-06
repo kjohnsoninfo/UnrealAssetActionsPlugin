@@ -10,7 +10,9 @@
 #define DeleteSelected TEXT("Delete Selected")
 #define SelectAll TEXT("Select All")
 #define DeselectAll TEXT("Deselect All")
-
+#define ListAll TEXT("List All Assets")
+#define ListUnused TEXT("List Unused Assets")
+#define ListDuplicate TEXT("List Duplicated Assets")
 
 void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 /*
@@ -19,14 +21,7 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 {
 	bCanSupportFocus = true;
 	AllAssetsDataFromManager = InArgs._AllAssetsDataFromManager; // set widget data array to data passed in from manager
-	DisplayedAssetsData = AllAssetsDataFromManager;
-
-	//// Load manager module
-	//FAssetActionsManagerModule& AssetActionsManager =
-	//	FModuleManager::LoadModuleChecked<FAssetActionsManagerModule>(TEXT("AssetActionsManager"));
-
-	//// Call delete fn from manager module passing in the checked data
-	//DisplayedAssetsData = AssetActionsManager.FilterForUnusedAssetData(AllAssetsDataFromManager);
+	DisplayedAssetsData = AllAssetsDataFromManager; // set display data to all by default
 
 	SharedTextFont = GetEmbossedFont();
 	SharedTextFont.Size = 12;
@@ -34,6 +29,12 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 	// Ensure clean slate when constructed
 	CheckBoxesArray.Empty();
 	CheckedAssetsToDelete.Empty();
+	FilterListItems.Empty();
+	
+	// Add filters to combobox
+	FilterListItems.Add(MakeShared<FString>(ListAll));
+	FilterListItems.Add(MakeShared<FString>(ListUnused));
+	FilterListItems.Add(MakeShared<FString>(ListDuplicate));
 
 	ChildSlot
 		[
@@ -68,10 +69,14 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 			[
 				SNew(SHorizontalBox)
 
-				// Search Bar
-				+ SHorizontalBox::Slot()
-
 				// Filter
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				[
+					ConstructFilterComboBox()
+				]
+
+				// Search Bar
 				+ SHorizontalBox::Slot()
 
 				// Manual Refresh
@@ -194,6 +199,74 @@ FReply SAdvancedDeletionTab::OnHelpButtonClicked()
 	
 	return FReply::Handled();
 }
+
+#pragma endregion
+
+#pragma region FilterSlot
+
+TSharedRef<SComboBox<TSharedPtr<FString>>> SAdvancedDeletionTab::ConstructFilterComboBox()
+/** Construct a combo box that contains and applies criteria to filter list view */
+{
+	TSharedRef<SComboBox<TSharedPtr<FString>>> ConstructedComboBox =
+		SNew(SComboBox<TSharedPtr<FString>>)
+		.OptionsSource(&FilterListItems)
+		.OnGenerateWidget(this, &SAdvancedDeletionTab::OnGenerateFilterItem) // must generate an SWidget
+		.OnSelectionChanged(this, &SAdvancedDeletionTab::OnFilterSelectionChanged)
+		// Combo Box has a slot for text shown on construction
+		[
+			SAssignNew(ComboBoxDisplayedText, STextBlock)
+			.Text(FText::FromString(ListAll)) // default list all
+		];
+
+	return ConstructedComboBox;
+}
+
+TSharedRef<SWidget> SAdvancedDeletionTab::OnGenerateFilterItem(TSharedPtr<FString> FilterItem)
+/** Construct a TextBlock for every filter item in the FilterListItems to display as options */
+{
+	TSharedRef<STextBlock> ConstructedFilterTextBlock =
+		SNew(STextBlock)
+		.Text(FText::FromString(*FilterItem.Get()));
+
+	return ConstructedFilterTextBlock;
+}
+
+// OnSelectionChange requires a selectinfo parameter (see SComboBox.h from source)
+void SAdvancedDeletionTab::OnFilterSelectionChanged(TSharedPtr<FString> SelectedFilter, ESelectInfo::Type InSelectInfo)
+/** Update ComboBox text and call appropriate filtering functions based on the user selected filter option */
+{
+	const FString SelectedFilterText = *SelectedFilter.Get();
+
+	// Set ComboBox text to selected filter
+	ComboBoxDisplayedText->SetText(FText::FromString(SelectedFilterText));
+
+	// Display all assets
+	if (SelectedFilterText == ListAll)
+	{
+		DisplayedAssetsData = AllAssetsDataFromManager;
+		RefreshAssetListView();
+	}
+
+	// Display only unused assets 
+	else if (SelectedFilterText == ListUnused)
+	{
+		// Load Manager
+		FAssetActionsManagerModule& AssetActionsManager =
+			FModuleManager::LoadModuleChecked<FAssetActionsManagerModule>(TEXT("AssetActionsManager"));
+
+		// Filter items
+		DisplayedAssetsData = AssetActionsManager.FilterForUnusedAssetData(AllAssetsDataFromManager);
+
+		RefreshAssetListView();
+	}
+
+	// Display assets with the same name
+	else if (SelectedFilterText == ListDuplicate)
+	{
+		return;
+	}
+}
+
 
 TSharedRef<SButton> SAdvancedDeletionTab::ConstructRefreshButton()
 /*
@@ -444,10 +517,7 @@ FReply SAdvancedDeletionTab::OnDeleteButtonClicked(TSharedPtr<FAssetData> Clicke
 	// Remove from list view if asset was deleted
 	if (bAssetDeleted)
 	{
-		if (DisplayedAssetsData.Contains(ClickedAssetData))
-		{
-			DisplayedAssetsData.Remove(ClickedAssetData);
-		}
+		EnsureAssetDeletionFromLists(ClickedAssetData);
 
 		RefreshAssetListView();
 	}
@@ -545,10 +615,7 @@ FReply SAdvancedDeletionTab::OnDeleteSelectedButtonClicked()
 	{
 		for (const TSharedPtr<FAssetData>& DeletedAsset : CheckedAssetsToDelete)
 		{
-			if (DisplayedAssetsData.Contains(DeletedAsset))
-			{
-				DisplayedAssetsData.Remove(DeletedAsset);
-			}
+			EnsureAssetDeletionFromLists(DeletedAsset);
 		}
 
 		RefreshAssetListView();
@@ -593,3 +660,16 @@ FReply SAdvancedDeletionTab::OnDeselectAllButtonClicked()
 }
 
 #pragma endregion
+
+void SAdvancedDeletionTab::EnsureAssetDeletionFromLists(const TSharedPtr<FAssetData>& AssetDataToDelete)
+{
+	if (DisplayedAssetsData.Contains(AssetDataToDelete))
+	{
+		DisplayedAssetsData.Remove(AssetDataToDelete);
+	}
+
+	if (AllAssetsDataFromManager.Contains(AssetDataToDelete))
+	{
+		AllAssetsDataFromManager.Remove(AssetDataToDelete);
+	}
+}

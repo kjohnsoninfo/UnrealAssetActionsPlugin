@@ -43,8 +43,23 @@ private:
 
 #pragma region FilterSlot
 
-	/** Construct filter bar */
+	/** Array that contains criteria to filter on */
+	TArray<TSharedPtr<FString>> FilterListItems;
+	
+	/** Text to display in the "selected item" area of the ComboBox 
+	* @note: This defaults to List All Assets
+	*/
+	TSharedPtr<STextBlock> ComboBoxDisplayedText;
 
+	/** Construct ComboBox that allows to user to filter asset list vew */
+	TSharedRef<SComboBox<TSharedPtr<FString>>> ConstructFilterComboBox();
+
+	/** Construct widgets to contain the filter items in the ComboBox dropdown options*/
+	TSharedRef<SWidget> OnGenerateFilterItem(TSharedPtr<FString> FilterItem);
+
+	/** Delegate function to apply filter criteria based on user selection */
+	void OnFilterSelectionChanged(TSharedPtr<FString> SelectedFilter, ESelectInfo::Type InSelectInfo);
+	
 	/** Construct Refresh Button that allows a user to manually refresh the asset list view */
 	TSharedRef<SButton> ConstructRefreshButton();
 	FReply OnRefreshButtonClicked();
@@ -140,6 +155,8 @@ private:
 
 	/** Common font that defines shared properties in all textblocks for consistency */
 	FSlateFontInfo SharedTextFont;
+
+	void EnsureAssetDeletionFromLists(const TSharedPtr<FAssetData>& AssetDataToDelete);
 
 	/** Helper function to get UE Embossed font style */
 	FSlateFontInfo GetEmbossedFont() const { return FCoreStyle::Get().GetFontStyle(FName("EmbossedText")); }
