@@ -5,6 +5,15 @@
 #include "Widgets/SCompoundWidget.h"
 #include "Widgets/Text/SRichTextBlock.h"
 
+namespace AssetActionsColumns
+{
+	static const FName Checkbox(TEXT("Checkbox"));
+	static const FName Class(TEXT("Class"));
+	static const FName Name(TEXT("Name"));
+	static const FName Path(TEXT("Path"));
+	static const FName Delete(TEXT("Delete"));
+}
+
 class SAdvancedDeletionTab : public SCompoundWidget
 {
 	SLATE_BEGIN_ARGS(SAdvancedDeletionTab) {}
@@ -18,6 +27,8 @@ class SAdvancedDeletionTab : public SCompoundWidget
 		 * The type must match what the ListItemSource fn in ConstructAssetListView expects.
 		 */
 		SLATE_ARGUMENT(TArray<TSharedPtr<FAssetData>>, AllAssetsDataFromManager) 
+
+		SLATE_ARGUMENT(TArray<FString>, SelectedFoldersPaths)
 
 	SLATE_END_ARGS()
 
@@ -47,9 +58,11 @@ private:
 	/** Array that contains criteria to filter on */
 	TArray<TSharedPtr<FString>> FilterListItems;
 	
-	/** Text to display in the "selected item" area of the ComboBox 
-	* @note: This defaults to List All Assets
-	*/
+	/** 
+	 * Text to display in the "selected item" area of the ComboBox 
+	 * 
+	 * @note: This defaults to List All Assets
+	 */
 	TSharedPtr<STextBlock> ComboBoxDisplayedText;
 
 	/** Construct ComboBox that allows to user to filter asset list vew */
@@ -70,46 +83,69 @@ private:
 
 #pragma region ListView
 	
-	/**
+	/** 
 	 * Pointer to the SListView created when widget is constructed
 	 * 
 	 * @note: This is be a ptr since it can be null before construction.
 	 */
 	TSharedPtr<SListView<TSharedPtr<FAssetData>>> ConstructedAssetListView;
 
+	/** Specify which column to sort with */
+	FName SortColumn;
+
+	/** Currently selected sorting mode */
+	EColumnSortMode::Type SortMode;
+
 	/** Construct SListView to display all assets in selected folder */
 	TSharedRef<SListView<TSharedPtr<FAssetData>>> ConstructAssetListView();
+
+
+	EColumnSortMode::Type GetSortModeForColumn(const FName ColumnId) const;
+	void OnSortModeChanged(const EColumnSortPriority::Type SortPriority, const FName& ColumnId, const EColumnSortMode::Type InSortMode);
+
+	void UpdateSorting();
+	void DefaultSorting();
 
 #pragma endregion
 
 #pragma region RowsInListView
 
-	/** Array to hold all asset data passed in by the AssetActionsManager
-	* @note: This is assigned to the InArgs of the Construct fn.
-	*/
+	/** 
+	 * Array to hold all asset data passed in by the AssetActionsManager
+	 * 
+	 * @note: This is assigned to the InArgs of the Construct fn.
+	 */
 	TArray<TSharedPtr<FAssetData>> AllAssetsDataFromManager;
 
-	/** Array to hold all asset data displayed in the list view
-	* @note: This is passed in as the list item source
-	*/
+	/** 
+	 * Array to hold all asset data displayed in the list view
+	 * 
+	 * @note: This is passed in as the list item source
+	 */
 	TArray<TSharedPtr<FAssetData>> DisplayedAssetsData;
 
-	/** Array to hold all constructed CheckBoxes when widget is constructed
-	* @note: The size of this array is dependent on the number of assets in the selected folder
-	* and subfolders. Array is important for select and deselect fns.
-	*/
+	/** 
+	 * Array to hold all constructed CheckBoxes when widget is constructed
+	 * 
+	 * @note: The size of this array is dependent on the number of assets in the selected folder
+	 * and subfolders. Array is important for select and deselect fns.
+	 */
 	TArray<TSharedRef<SCheckBox>> CheckBoxesArray;
 
-	/** Array to hold all assets that are checked in the asset list view.
-	* @note: Array is important for delete selected fn.
-	*/
+	/** 
+	 * Array to hold all assets that are checked in the asset list view.
+	 * 
+	 * @note: Array is important for delete selected fn.
+	 */
 	TArray<TSharedPtr<FAssetData>> CheckedAssetsToDelete;
 
-	/** Generate a row in the list view for every asset found in the selected folders
-	* @param AssetDataToDisplay: AssetData specific to each row
-	* @note: AssetDataToDisplay is used to determine the clicked asset data when user 
-	* clicks on a specific row
-	*/
+	/** 
+	 * Generate a row in the list view for every asset found in the selected folders
+	 * 
+	 * @param AssetDataToDisplay: AssetData specific to each row
+	 * @note: AssetDataToDisplay is used to determine the clicked asset data when user 
+	 *		  clicks on a specific row
+	 */
 	TSharedRef<ITableRow> OnGenerateRowForListView(TSharedPtr<FAssetData> AssetDataToDisplay, 
 		const TSharedRef<STableViewBase>& OwnerTable);
 	
@@ -125,9 +161,11 @@ private:
 	/** Construct a delete button for each row in the list view */
 	TSharedRef<SButton> ConstructDeleteButtonForRow(const TSharedPtr<FAssetData>& AssetDataToDisplay);
 
-	/** Delegate function that calls the manager delete fn when the delete button in a row is clicked
-	* @note: This function is for deleting a single asset.
-	*/
+	/** 
+	 * Delegate function that calls the manager delete fn when the delete button in a row is clicked
+	 * 
+	 * @note: This function is for deleting a single asset.
+	 */
 	FReply OnDeleteButtonClicked(TSharedPtr<FAssetData> ClickedAssetData);
 #pragma endregion
 
@@ -154,21 +192,26 @@ private:
 
 #pragma region HelpfulInfoSlot
 
-	/** String containing message displayed for the asset count
-	* @note: this is reassigned when widget is refreshed
-	*/
+	/** 
+	 * String containing message displayed for the asset count
+	 * 
+	 * @note: this is reassigned when widget is refreshed
+	 */
 	FString AssetCountMsg;
 
 	/**
-	* Pointer to the SRichTextBlock created when widget is constructed
-	*
-	* @note: This allows for text to change dynamically when widget is refreshed
-	*/
+	 * Pointer to the SRichTextBlock created when widget is constructed
+	 *
+	 * @note: This allows for text to change dynamically when widget is refreshed
+	 */
 	TSharedPtr<SRichTextBlock> ConstructedAssetCountTextBlock;
+
+	TArray<FString> SelectedFoldersPaths;
 
 	/** Construct rich text block to show the count of displayed assets in the list view */
 	TSharedRef<SRichTextBlock> ConstructTextForAssetCount();
 
+	TSharedRef<STextBlock> ConstructTextForSelectedFolderPath();
 
 #pragma endregion
 

@@ -20,19 +20,22 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 */
 {
 	bCanSupportFocus = true;
-	AllAssetsDataFromManager = InArgs._AllAssetsDataFromManager; // set widget data array to data passed in from manager
-	DisplayedAssetsData = AllAssetsDataFromManager; // set display data to all by default
-
-	SharedTextFont = GetEmbossedFont();
-	SharedTextFont.Size = 12;
-
-	AssetCountMsg = GetAssetCountMsg();
 
 	// Ensure clean slate when constructed
 	CheckBoxesArray.Empty();
 	CheckedAssetsToDelete.Empty();
 	FilterListItems.Empty();
-	
+
+	// Grab data from manager
+	AllAssetsDataFromManager = InArgs._AllAssetsDataFromManager;
+	DisplayedAssetsData = AllAssetsDataFromManager; // set display data to all by default
+	SelectedFoldersPaths = InArgs._SelectedFoldersPaths; 
+
+	AssetCountMsg = GetAssetCountMsg();
+
+	SharedTextFont = GetEmbossedFont();
+	SharedTextFont.Size = 12;
+
 	// Add filters to combobox
 	FilterListItems.Add(MakeShared<FString>(ListAll));
 	FilterListItems.Add(MakeShared<FString>(ListUnused));
@@ -119,6 +122,11 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 
 				// Current folder path
 				+ SHorizontalBox::Slot()
+				.HAlign(HAlign_Right)
+				.FillWidth(12.f)
+				[
+					ConstructTextForSelectedFolderPath()
+				]
 			]
 
 			// Fifth slot for quick buttons 
@@ -330,40 +338,75 @@ TSharedRef<SListView<TSharedPtr<FAssetData>>> SAdvancedDeletionTab::ConstructAss
 		(
 			SNew(SHeaderRow)
 
-			+ SHeaderRow::Column("CheckBox")
-			+ SHeaderRow::Column("Name").DefaultLabel(FText::FromString(TEXT("Asset Name")))
-			+ SHeaderRow::Column("Class").DefaultLabel(FText::FromString(TEXT("Asset Class")))
-			+ SHeaderRow::Column("Path").DefaultLabel(FText::FromString(TEXT("Asset Parent Folder")))
-			+ SHeaderRow::Column("Delete").DefaultLabel(FText::FromString(TEXT(""))).FillWidth(.375f)
+			+ SHeaderRow::Column(AssetActionsColumns::Checkbox)
+			.FillWidth(.2f)
+
+			+ SHeaderRow::Column(AssetActionsColumns::Class)
+			.FillWidth(1.5f)
+			.DefaultLabel(FText::FromString(TEXT("Asset Type")))
+			.SortMode(this, &SAdvancedDeletionTab::GetSortModeForColumn, AssetActionsColumns::Class)
+
+			+ SHeaderRow::Column(AssetActionsColumns::Name)
+			.FillWidth(2.f)
+			.DefaultLabel(FText::FromString(TEXT("Asset Name")))
+			.SortMode(this, &SAdvancedDeletionTab::GetSortModeForColumn, AssetActionsColumns::Name)
+			.OnSort(this, &SAdvancedDeletionTab::OnSortModeChanged)
+
+			+ SHeaderRow::Column(AssetActionsColumns::Path)
+			.FillWidth(2.5f)
+			.DefaultLabel(FText::FromString(TEXT("Asset Parent Folder")))
+			.SortMode(this, &SAdvancedDeletionTab::GetSortModeForColumn, AssetActionsColumns::Path)
+
+			+ SHeaderRow::Column(AssetActionsColumns::Delete)
+			.FillWidth(.7f)
+			.DefaultLabel(FText::FromString(TEXT("")))
 		);
+
+	DefaultSorting();
 
 	return ConstructedAssetListView.ToSharedRef(); // convert to ref after construction
 }
 
-void SAdvancedDeletionTab::RefreshWidget()
-/*
-	Call RebuildList to ensure AssetListView is always up to date
-*/
+void SAdvancedDeletionTab::DefaultSorting()
 {
-	// Ensure clean slate when refreshed
-	CheckBoxesArray.Empty();
-	CheckedAssetsToDelete.Empty();
+	SortColumn = AssetActionsColumns::Name;
+	SortMode = EColumnSortMode::Ascending;
 
-	// Refresh Asset List View
-	if (ConstructedAssetListView.IsValid())
+	DisplayedAssetsData.Sort([](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
+		{ return A->AssetName.Compare(B->AssetName) < 0; });
+}
+
+EColumnSortMode::Type SAdvancedDeletionTab::GetSortModeForColumn(const FName ColumnId) const
+{
+	return SortColumn == ColumnId ? SortMode : EColumnSortMode::None;
+}
+
+void SAdvancedDeletionTab::OnSortModeChanged(const EColumnSortPriority::Type SortPriority, const FName& ColumnId, const EColumnSortMode::Type InSortMode)
+{
+	SortColumn = ColumnId;
+	SortMode = InSortMode;
+	UpdateSorting();
+	RefreshWidget();
+}
+
+void SAdvancedDeletionTab::UpdateSorting()
+{
+	if (SortColumn == AssetActionsColumns::Name)
 	{
-		ConstructedAssetListView->RebuildList();
-	}
-
-	// Refresh Asset Count Text
-	AssetCountMsg = GetAssetCountMsg();
-
-	if (ConstructedAssetCountTextBlock.IsValid())
-	{
-		ConstructedAssetCountTextBlock->SetText(FText::FromString(AssetCountMsg));
-		ConstructedAssetCountTextBlock->Refresh();
+		if (SortMode == EColumnSortMode::Ascending)
+		{
+			DisplayedAssetsData.Sort([](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
+				{ return A->AssetName.Compare(B->AssetName) < 0; });
+		}
+		else
+		{
+			DisplayedAssetsData.Sort([](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
+				{ return B->AssetName.Compare(A->AssetName) < 0; });
+		}
 	}
 }
+
+
 
 #pragma endregion
 
@@ -406,26 +449,29 @@ TSharedRef<ITableRow> SAdvancedDeletionTab::OnGenerateRowForListView(TSharedPtr<
 					ConstructCheckBoxes(AssetDataToDisplay)
 				]
 
-				// Second slot for asset name
+				// Second slot for asset class
 				+ SHorizontalBox::Slot()
 				.HAlign(HAlign_Center)
 				.VAlign(VAlign_Center)
-				[
-					ConstructTextForRow(AssetName)
-				]
-
-				// Third slot for asset class
-				+ SHorizontalBox::Slot()
-				.HAlign(HAlign_Center)
-				.VAlign(VAlign_Center)
+				.FillWidth(1.5f)
 				[
 					ConstructTextForRow(AssetClass)
+				]
+
+				// Third slot for asset name
+				+ SHorizontalBox::Slot()
+				.HAlign(HAlign_Center)
+				.VAlign(VAlign_Center)
+				.FillWidth(2.f)
+				[
+					ConstructTextForRow(AssetName)
 				]
 
 				// Fourth slot for parent folder path
 				+ SHorizontalBox::Slot()
 				.HAlign(HAlign_Center)
 				.VAlign(VAlign_Center)
+				.FillWidth(2.5f)
 				[
 					ConstructTextForRow(AssetParentFolder)
 				]
@@ -434,6 +480,7 @@ TSharedRef<ITableRow> SAdvancedDeletionTab::OnGenerateRowForListView(TSharedPtr<
 				+ SHorizontalBox::Slot()
 				.HAlign(HAlign_Center)
 				.VAlign(VAlign_Center)
+				.FillWidth(.2f)
 				[
 					ConstructTextForRow(AssetRefCount)
 				]
@@ -442,6 +489,8 @@ TSharedRef<ITableRow> SAdvancedDeletionTab::OnGenerateRowForListView(TSharedPtr<
 				+ SHorizontalBox::Slot()
 				.HAlign(HAlign_Right)
 				.VAlign(VAlign_Fill)
+				.FillWidth(.7f)
+				.Padding(2.f, 2.f, 10.f, 2.f)
 				[
 					ConstructDeleteButtonForRow(AssetDataToDisplay)
 				]
@@ -500,7 +549,8 @@ TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTextForRow(const FString& 
 		SNew(STextBlock)
 		.Text(FText::FromString(RowText))
 		.Font(SharedTextFont)
-		.ColorAndOpacity(FColor::White);
+		.ColorAndOpacity(FColor::White)
+		.AutoWrapText(true);
 
 	return ConstructedTextBlock;
 }
@@ -510,7 +560,7 @@ TSharedRef<SButton> SAdvancedDeletionTab::ConstructDeleteButtonForRow(const TSha
 	Construct delete button that deletes a single asset for each row in the list view
 */
 {
-	TSharedRef<SButton> ConstructedDeleteButton = 
+	TSharedRef<SButton> ConstructedDeleteButton =
 		SNew(SButton)
 		.OnClicked(this, &SAdvancedDeletionTab::OnDeleteButtonClicked, AssetDataToDisplay);
 
@@ -686,12 +736,64 @@ FReply SAdvancedDeletionTab::OnDeselectAllButtonClicked()
 
 TSharedRef<SRichTextBlock> SAdvancedDeletionTab::ConstructTextForAssetCount()
 {
+	const FTextBlockStyle TextBlockStyle = 
+		FTextBlockStyle().SetFont(SharedTextFont).SetColorAndOpacity(FColor::White);
+
 	ConstructedAssetCountTextBlock =
 		SNew(SRichTextBlock);
 		
 	ConstructedAssetCountTextBlock->SetText(FText::FromString(AssetCountMsg));
+	ConstructedAssetCountTextBlock->SetTextStyle(TextBlockStyle);
 
 	return ConstructedAssetCountTextBlock.ToSharedRef();
+}
+
+TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTextForSelectedFolderPath()
+{
+	FString SelectedFolderPathsText;
+	FString SelectedFolderDisplayedText;
+
+	// when only one folder is selected, set text equal to only element
+	if (SelectedFoldersPaths.Num() == 1)
+	{
+		SelectedFolderPathsText = SelectedFoldersPaths[0];
+		SelectedFolderDisplayedText = SelectedFolderPathsText;
+	}
+
+	// else append each folder path with a + separator
+	else if (SelectedFoldersPaths.Num() > 1)
+	{
+		for (int i = 0; i < SelectedFoldersPaths.Num(); ++i)
+		{
+			// if last element in list, don't add + seperator
+			if (i == SelectedFoldersPaths.Num() - 1)
+			{
+				SelectedFolderPathsText.Append(SelectedFoldersPaths[i]);
+			}
+
+			else
+			{
+				SelectedFolderPathsText.Append(SelectedFoldersPaths[i] + TEXT(" + "));
+			}
+		}
+
+		if (SelectedFoldersPaths.Num() > 4)
+		{
+			SelectedFolderDisplayedText = 
+				TEXT("Too many folders selected to display. Refer to Content Browser");
+		}
+
+		SelectedFolderDisplayedText = SelectedFolderPathsText;
+	}
+
+	TSharedRef<STextBlock> ConstructedTextBlock =
+		SNew(STextBlock)
+		.Text(FText::FromString(TEXT("Selected folder path: ") + SelectedFolderDisplayedText))
+		.Font(SharedTextFont)
+		.ColorAndOpacity(FColor::White)
+		.AutoWrapText(true);
+
+	return ConstructedTextBlock;
 }
 
 #pragma endregion
@@ -709,6 +811,33 @@ void SAdvancedDeletionTab::EnsureAssetDeletionFromLists(const TSharedPtr<FAssetD
 	{
 		AllAssetsDataFromManager.Remove(AssetDataToDelete);
 	}
+}
+
+void SAdvancedDeletionTab::RefreshWidget()
+/*
+	Refresh to ensure AssetListView and AssetCount is always up to date
+*/
+{
+	// Ensure clean slate when refreshed
+	CheckBoxesArray.Empty();
+	CheckedAssetsToDelete.Empty();
+
+	// Refresh Asset List View
+	if (ConstructedAssetListView.IsValid())
+	{
+		ConstructedAssetListView->RebuildList();
+	}
+
+	// Refresh Asset Count Text
+	AssetCountMsg = GetAssetCountMsg();
+
+	if (ConstructedAssetCountTextBlock.IsValid())
+	{
+		ConstructedAssetCountTextBlock->SetText(FText::FromString(AssetCountMsg));
+		ConstructedAssetCountTextBlock->Refresh();
+	}
+}
 
 #pragma endregion
-}
+
+

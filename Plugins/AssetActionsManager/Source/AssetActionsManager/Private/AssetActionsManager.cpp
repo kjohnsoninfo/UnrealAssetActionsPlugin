@@ -156,6 +156,7 @@ TSharedRef<SDockTab> FAssetActionsManagerModule::OnSpawnAdvancedDeletionTab(cons
 		[
 			SNew(SAdvancedDeletionTab)
 				.AllAssetsDataFromManager(GetAllAssetDataUnderSelectedFolder()) // matches the SLATE_ARGUMENT in widget file
+				.SelectedFoldersPaths(SelectedFolderPaths)
 		];
 }
 
