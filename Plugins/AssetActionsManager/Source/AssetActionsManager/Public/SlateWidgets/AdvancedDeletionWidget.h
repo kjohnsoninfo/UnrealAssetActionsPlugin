@@ -9,9 +9,10 @@ namespace AssetActionsColumns
 {
 	static const FName Checkbox(TEXT("Checkbox"));
 	static const FName Class(TEXT("Class"));
-	static const FName Name(TEXT("Name"));
-	static const FName Path(TEXT("Path"));
-	static const FName Delete(TEXT("Delete"));
+	static const FName Name(TEXT("Name")); 
+	static const FName Path(TEXT("Path")); 
+	static const FName RefCount(TEXT("RefCount")); 
+	static const FName Delete(TEXT("Delete")); // unsortable
 }
 
 class SAdvancedDeletionTab : public SCompoundWidget
@@ -90,20 +91,29 @@ private:
 	 */
 	TSharedPtr<SListView<TSharedPtr<FAssetData>>> ConstructedAssetListView;
 
-	/** Specify which column to sort with */
-	FName SortColumn;
+	/** Currently selected column to sort with; default = Name */
+	FName SortByColumn;
 
-	/** Currently selected sorting mode */
+	/** Currently selected sorting mode; default = Ascending */
 	EColumnSortMode::Type SortMode;
 
 	/** Construct SListView to display all assets in selected folder */
 	TSharedRef<SListView<TSharedPtr<FAssetData>>> ConstructAssetListView();
 
-
+	/** 
+	 * Delegate function to get sort mode for each column
+	 *
+	 * @note: the second const declares a const fn which is useful for get fns
+	 */
 	EColumnSortMode::Type GetSortModeForColumn(const FName ColumnId) const;
+
+	/** Delegate function to apply new sort criteria when changed by user */
 	void OnSortModeChanged(const EColumnSortPriority::Type SortPriority, const FName& ColumnId, const EColumnSortMode::Type InSortMode);
 
+	/** Function that contains sorting logic for every sortable column */
 	void UpdateSorting();
+	
+	/** Function sets the sort criteria when widget is first spawned */
 	void DefaultSorting();
 
 #pragma endregion

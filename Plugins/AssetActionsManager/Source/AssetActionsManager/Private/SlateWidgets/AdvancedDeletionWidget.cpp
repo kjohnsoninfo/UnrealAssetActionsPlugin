@@ -12,7 +12,7 @@
 #define DeselectAll TEXT("Deselect All")
 #define ListAll TEXT("List All Assets")
 #define ListUnused TEXT("List Unused Assets")
-#define ListDuplicate TEXT("List Duplicated Assets")
+#define ListDuplicate TEXT("List Duplicate Name Assets")
 
 void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 /*
@@ -345,6 +345,7 @@ TSharedRef<SListView<TSharedPtr<FAssetData>>> SAdvancedDeletionTab::ConstructAss
 			.FillWidth(1.5f)
 			.DefaultLabel(FText::FromString(TEXT("Asset Type")))
 			.SortMode(this, &SAdvancedDeletionTab::GetSortModeForColumn, AssetActionsColumns::Class)
+			.OnSort(this, &SAdvancedDeletionTab::OnSortModeChanged)
 
 			+ SHeaderRow::Column(AssetActionsColumns::Name)
 			.FillWidth(2.f)
@@ -356,6 +357,13 @@ TSharedRef<SListView<TSharedPtr<FAssetData>>> SAdvancedDeletionTab::ConstructAss
 			.FillWidth(2.5f)
 			.DefaultLabel(FText::FromString(TEXT("Asset Parent Folder")))
 			.SortMode(this, &SAdvancedDeletionTab::GetSortModeForColumn, AssetActionsColumns::Path)
+			.OnSort(this, &SAdvancedDeletionTab::OnSortModeChanged)
+
+			+ SHeaderRow::Column(AssetActionsColumns::RefCount)
+			.FillWidth(2.5f)
+			.DefaultLabel(FText::FromString(TEXT("Ref Count")))
+			.SortMode(this, &SAdvancedDeletionTab::GetSortModeForColumn, AssetActionsColumns::RefCount)
+			.OnSort(this, &SAdvancedDeletionTab::OnSortModeChanged)
 
 			+ SHeaderRow::Column(AssetActionsColumns::Delete)
 			.FillWidth(.7f)
@@ -368,8 +376,11 @@ TSharedRef<SListView<TSharedPtr<FAssetData>>> SAdvancedDeletionTab::ConstructAss
 }
 
 void SAdvancedDeletionTab::DefaultSorting()
+/*
+	Sets default sort column, sort mode, and sorting on widget spawn
+*/
 {
-	SortColumn = AssetActionsColumns::Name;
+	SortByColumn = AssetActionsColumns::Name;
 	SortMode = EColumnSortMode::Ascending;
 
 	DisplayedAssetsData.Sort([](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
@@ -377,36 +388,103 @@ void SAdvancedDeletionTab::DefaultSorting()
 }
 
 EColumnSortMode::Type SAdvancedDeletionTab::GetSortModeForColumn(const FName ColumnId) const
+/*
+	Get the sort mode of the column when user selects column to sort by.
+	If user selected column does not equal column passed in from header row, set sort mode to none
+*/
 {
-	return SortColumn == ColumnId ? SortMode : EColumnSortMode::None;
+	return SortByColumn == ColumnId ? SortMode : EColumnSortMode::None;
 }
 
 void SAdvancedDeletionTab::OnSortModeChanged(const EColumnSortPriority::Type SortPriority, const FName& ColumnId, const EColumnSortMode::Type InSortMode)
+/*
+	Set sort column and sort mode to user selected option. Then refresh widget which updates the applied sort order. 
+*/
 {
-	SortColumn = ColumnId;
+	SortByColumn = ColumnId;
 	SortMode = InSortMode;
-	UpdateSorting();
 	RefreshWidget();
 }
 
 void SAdvancedDeletionTab::UpdateSorting()
+/*
+	Sort DisplayedAssetData by comparing the data within the user selected column; called in RefreshWidget 
+*/
 {
-	if (SortColumn == AssetActionsColumns::Name)
+	// Sort alphabetically by asset name
+	if (SortByColumn == AssetActionsColumns::Name)
+	{
+		if (SortMode == EColumnSortMode::Ascending) 
+		{
+			DisplayedAssetsData.Sort([](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
+				{ return A->AssetName.Compare(B->AssetName) < 0; }); // A->Z
+		}
+		else 
+		{
+			DisplayedAssetsData.Sort([](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
+				{ return B->AssetName.Compare(A->AssetName) < 0; }); // Z->A
+		}
+	}
+
+	// Sort alphabetically by asset class
+	if (SortByColumn == AssetActionsColumns::Class)
 	{
 		if (SortMode == EColumnSortMode::Ascending)
 		{
 			DisplayedAssetsData.Sort([](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
-				{ return A->AssetName.Compare(B->AssetName) < 0; });
+				{ return A->GetClass()->GetName().Compare(B->GetClass()->GetName()) < 0; }); // A->Z
 		}
 		else
 		{
 			DisplayedAssetsData.Sort([](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
-				{ return B->AssetName.Compare(A->AssetName) < 0; });
+				{ return B->GetClass()->GetName().Compare(A->GetClass()->GetName()) < 0; }); // Z->A
+		}
+	}
+
+	// Sort alphabetically by asset parent folder path
+	if (SortByColumn == AssetActionsColumns::Path)
+	{
+		if (SortMode == EColumnSortMode::Ascending)
+		{
+			DisplayedAssetsData.Sort([](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
+				{ return A->PackagePath.Compare(B->PackagePath) < 0; }); // A->Z
+		}
+		else
+		{
+			DisplayedAssetsData.Sort([](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
+				{ return B->PackagePath.Compare(A->PackagePath) < 0; }); // Z->A
+		}
+	}
+
+	// Sort by asset reference count
+	if (SortByColumn == AssetActionsColumns::RefCount)
+	{
+		// Load manager module
+		FAssetActionsManagerModule& AssetActionsManager =
+			FModuleManager::LoadModuleChecked<FAssetActionsManagerModule>(TEXT("AssetActionsManager"));
+
+		if (SortMode == EColumnSortMode::Ascending)
+		{
+			DisplayedAssetsData.Sort([&](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
+				{
+					int32 CountA = AssetActionsManager.GetAssetReferencersCount(A);
+					int32 CountB = AssetActionsManager.GetAssetReferencersCount(B);
+
+					return CountA < CountB; // least->most
+				});
+		}
+		else
+		{
+			DisplayedAssetsData.Sort([&](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
+				{
+					int32 CountA = AssetActionsManager.GetAssetReferencersCount(A);
+					int32 CountB = AssetActionsManager.GetAssetReferencersCount(B);
+
+					return CountB < CountA; // most->least
+				});
 		}
 	}
 }
-
-
 
 #pragma endregion
 
@@ -550,6 +628,7 @@ TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTextForRow(const FString& 
 		.Text(FText::FromString(RowText))
 		.Font(SharedTextFont)
 		.ColorAndOpacity(FColor::White)
+		.WrappingPolicy(ETextWrappingPolicy::AllowPerCharacterWrapping)
 		.AutoWrapText(true);
 
 	return ConstructedTextBlock;
@@ -821,6 +900,9 @@ void SAdvancedDeletionTab::RefreshWidget()
 	// Ensure clean slate when refreshed
 	CheckBoxesArray.Empty();
 	CheckedAssetsToDelete.Empty();
+
+	// Refresh sorting
+	UpdateSorting();
 
 	// Refresh Asset List View
 	if (ConstructedAssetListView.IsValid())
