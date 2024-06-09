@@ -217,7 +217,7 @@ TSharedRef<SButton> SAssetActionsTab::ConstructHelpButton()
 	TSharedRef<SButton> ConstructedHelpButton =
 		SNew(SButton)
 		.ButtonStyle(FAppStyle::Get(), "SimpleButton")
-		.ToolTipText(LOCTEXT("HelpDocumentationToolTip", "Go to documentation for Advanced Deletion"))
+		.ToolTipText(LOCTEXT("HelpDocumentationToolTip", "Go to documentation for Quick Asset Actions"))
 		.ContentPadding(FMargin(5.f))
 		
 		.OnClicked(this, &SAssetActionsTab::OnHelpButtonClicked)
@@ -300,8 +300,7 @@ void SAssetActionsTab::OnFilterSelectionChanged(TSharedPtr<FString> SelectedFilt
 	else if (SelectedFilterText == ListUnused)
 	{
 		// Load Manager
-		FAssetActionsManagerModule& AssetActionsManager =
-			FModuleManager::LoadModuleChecked<FAssetActionsManagerModule>(TEXT("AssetActionsManager"));
+		FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
 
 		// Filter items
 		DisplayedAssetsData = AssetActionsManager.FilterForUnusedAssetData(AllAssetsDataFromManager);
@@ -312,14 +311,14 @@ void SAssetActionsTab::OnFilterSelectionChanged(TSharedPtr<FString> SelectedFilt
 	// Display assets with duplicate names 
 	else if (SelectedFilterText == ListDuplicate)
 	{
-		//// Load Manager
-		//FAssetActionsManagerModule& AssetActionsManager =
-		//	FModuleManager::LoadModuleChecked<FAssetActionsManagerModule>(TEXT("AssetActionsManager"));
+		// Load Manager
+		FAssetActionsManagerModule& AssetActionsManager =
+			FModuleManager::LoadModuleChecked<FAssetActionsManagerModule>(TEXT("AssetActionsManager"));
 
-		//// Filter items
-		//DisplayedAssetsData = AssetActionsManager.FilterForUnusedAssetData(AllAssetsDataFromManager);
+		// Filter items
+		DisplayedAssetsData = AssetActionsManager.FilterForDuplicateNameData(AllAssetsDataFromManager);
 
-		return;
+		RefreshWidget();
 	}
 }
 
@@ -352,7 +351,7 @@ FReply SAssetActionsTab::OnRefreshButtonClicked()
 */
 {
 	RefreshWidget();
-	DebugHelper::NotificationPopup("Asset List View Refreshed");
+	DebugHelper::NotificationPopup("Asset Actions List View Refreshed");
 	return FReply::Handled();
 }
 
@@ -421,7 +420,7 @@ TSharedRef<SListView<TSharedPtr<FAssetData>>> SAssetActionsTab::ConstructAssetLi
 			.SortMode(this, &SAssetActionsTab::GetSortModeForColumn, AssetActionsColumns::RefCount)
 			.OnSort(this, &SAssetActionsTab::OnSortModeChanged)
 			[
-				ConstructTextForHeaderRow(TEXT("Ref Count"))
+				ConstructTextForHeaderRow(TEXT("# of Refs"))
 			]
 
 			+ SHeaderRow::Column(AssetActionsColumns::Delete)
@@ -446,7 +445,7 @@ TSharedRef<STextBlock> SAssetActionsTab::ConstructTextForHeaderRow(const FString
 	// Fixes formatting for path column
 	if (ColumnName == TEXT("Asset Parent Folder"))
 	{
-		ConstructedTextBlock->SetMargin(FMargin(35.f, 0.f, 0.f, 0.f));
+		ConstructedTextBlock->SetMargin(FMargin(25.f, 0.f, 0.f, 0.f));
 	}
 
 	return ConstructedTextBlock;
@@ -575,8 +574,7 @@ void SAssetActionsTab::UpdateSorting()
 	if (SortByColumn == AssetActionsColumns::RefCount)
 	{
 		// Load manager module
-		FAssetActionsManagerModule& AssetActionsManager =
-			FModuleManager::LoadModuleChecked<FAssetActionsManagerModule>(TEXT("AssetActionsManager"));
+		FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
 
 		if (SortMode == EColumnSortMode::Ascending)
 		{
@@ -621,8 +619,7 @@ TSharedRef<ITableRow> SAssetActionsTab::OnGenerateRowForListView(TSharedPtr<FAss
 	const FString AssetParentFolder = AssetDataToDisplay->PackagePath.ToString();
 	
 	// Load manager module
-	FAssetActionsManagerModule& AssetActionsManager =
-		FModuleManager::LoadModuleChecked<FAssetActionsManagerModule>(TEXT("AssetActionsManager"));
+	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
 
 	// Call referencer count fn
 	const FString AssetRefCount = FString::FromInt(AssetActionsManager.GetAssetReferencersCount(AssetDataToDisplay));
@@ -799,8 +796,7 @@ FReply SAssetActionsTab::OnDeleteButtonClicked(TSharedPtr<FAssetData> ClickedAss
 	AssetToDelete.Add(*ClickedAssetData.Get()); // deref from Ptr
 
 	// Load manager module
-	FAssetActionsManagerModule& AssetActionsManager =
-	FModuleManager::LoadModuleChecked<FAssetActionsManagerModule>(TEXT("AssetActionsManager"));
+	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
 
 	// Call delete fn from manager module passing in the clicked data
 	bool bAssetDeleted = AssetActionsManager.DeleteAssetsInList(AssetToDelete);
@@ -895,8 +891,7 @@ FReply SAssetActionsTab::OnDeleteSelectedButtonClicked()
 	}
 
 	// Load manager module
-	FAssetActionsManagerModule& AssetActionsManager =
-		FModuleManager::LoadModuleChecked<FAssetActionsManagerModule>(TEXT("AssetActionsManager"));
+	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
 
 	// Call delete fn from manager module passing in the checked data
 	bool bAssetDeleted = AssetActionsManager.DeleteAssetsInList(AssetsToDelete);
@@ -1025,6 +1020,11 @@ void SAssetActionsTab::RefreshWidget()
 	Refresh to ensure AssetListView and AssetCount is always up to date
 */
 {
+	// Refresh asset data list if changes identified
+	//CheckForAssetChanges();
+
+	FAssetActionsManagerModule& AssetActions = LoadManagerModule();
+
 	// Refresh sorting
 	UpdateSorting();
 

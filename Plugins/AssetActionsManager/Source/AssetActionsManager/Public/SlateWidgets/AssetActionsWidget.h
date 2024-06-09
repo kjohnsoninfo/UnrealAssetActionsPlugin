@@ -181,6 +181,7 @@ private:
 	 * @note: This function is for deleting a single asset.
 	 */
 	FReply OnDeleteButtonClicked(TSharedPtr<FAssetData> ClickedAssetData);
+
 #pragma endregion
 
 #pragma region ButtonSlot
@@ -237,11 +238,18 @@ private:
 	/** Refresh widget to ensure text and list view are always up to date */
 	void RefreshWidget();
 
+	/** Helper function to update changes in the list view such as moving folders or adding assets  */
+	void CheckForAssetChanges();
+
 	/** Helper function to remove asset data from arrays when deleted */
 	void EnsureAssetDeletionFromLists(const TSharedPtr<FAssetData>& AssetDataToDelete);
 
 	/** Helper function to empty all data arrays associated with checkboxes */
 	void ClearCheckedStates();
+
+	/** Helper function to load asset action manager module */
+	FAssetActionsManagerModule& LoadManagerModule() const 
+	{ return FModuleManager::LoadModuleChecked<FAssetActionsManagerModule>(TEXT("AssetActionsManager")); }
 
 	/** Helper function to get UE Embossed font style */
 	FSlateFontInfo GetEmbossedFont() const { return FCoreStyle::Get().GetFontStyle(FName("EmbossedText")); }

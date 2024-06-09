@@ -81,7 +81,7 @@ void FAssetActionsManagerModule::AddCBMenuEntry(FMenuBuilder& MenuBuilder)
 void FAssetActionsManagerModule::OnAssetActionsMenuEntryClicked()
 {
 	// Fix up redirectors if needed
-	FixUpRedirectors();
+	// FixUpRedirectors();
 
 	// Spawn tab 
 	FGlobalTabmanager::Get()->TryInvokeTab(FName("AssetActions"));
@@ -182,7 +182,7 @@ TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::GetAllAssetDataUnderS
 		DebugHelper::MessageDialogBox(EAppMsgType::Ok, TEXT("No assets found under selected folder"));
 	}
 
-	for (const FString AssetPathName : AllAssetsPathsNames)
+	for (FString AssetPathName : AllAssetsPathsNames)
 	{
 		// Don't delete any required UE assets
 		if (AssetPathName.Contains(TEXT("Developers")) ||
@@ -193,15 +193,17 @@ TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::GetAllAssetDataUnderS
 			continue;
 		}
 
+		// Avoid TryConvertFilenameToLongPackageName warning
+		TArray<FString> PathNameArray;
+		AssetPathName.ParseIntoArray(PathNameArray, TEXT("."));
+		AssetPathName = PathNameArray[0];
+
 		// If asset does not exist, skip and move to next asset
 		if (!UEditorAssetLibrary::DoesAssetExist(AssetPathName)) continue;
 
 
 		// Get asset data and add to array to pass to widget
 		FAssetData AssetData = UEditorAssetLibrary::FindAssetData(AssetPathName);
-
-		// Skip level maps
-		if (AssetData.GetClass()->GetName() == TEXT("World")) continue;
 
 		AllAssetsData.Add(MakeShared<FAssetData>(AssetData));
 	}
@@ -212,6 +214,14 @@ TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::GetAllAssetDataUnderS
 #pragma endregion
 
 #pragma region ProcessDataForWidget
+
+int32 FAssetActionsManagerModule::GetAssetReferencersCount(const TSharedPtr<FAssetData>& AssetData)
+{
+	TArray<FString> AssetReferencers =
+		UEditorAssetLibrary::FindPackageReferencersForAsset(AssetData->GetSoftObjectPath().GetLongPackageName());
+
+	return AssetReferencers.Num();
+}
 
 bool FAssetActionsManagerModule::DeleteAssetsInList(const TArray<FAssetData>& AssetsToDelete)
 /*
@@ -227,14 +237,6 @@ bool FAssetActionsManagerModule::DeleteAssetsInList(const TArray<FAssetData>& As
 	return false;
 }
 
-int32 FAssetActionsManagerModule::GetAssetReferencersCount(const TSharedPtr<FAssetData>& AssetData)
-{
-	TArray<FString> AssetReferencers =
-		UEditorAssetLibrary::FindPackageReferencersForAsset(AssetData->ObjectPath.ToString());
-
-	return AssetReferencers.Num();
-}
-
 TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::FilterForUnusedAssetData(const TArray<TSharedPtr<FAssetData>>& AssetDataToFilter)
 /*
 	List unsused assets by checking count of asset referencers for all assets under selected folder 
@@ -244,6 +246,10 @@ TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::FilterForUnusedAssetD
 
 	for (const TSharedPtr<FAssetData>& AssetData : AssetDataToFilter)
 	{
+
+		// Skip level maps
+		if (AssetData->GetClass()->GetName() == TEXT("World")) continue;
+
 		if (GetAssetReferencersCount(AssetData) == 0)
 		{
 			UnusedAssetsData.Add(AssetData);
@@ -251,6 +257,36 @@ TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::FilterForUnusedAssetD
 	}
 
 	return UnusedAssetsData;
+}
+
+TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::FilterForDuplicateNameData(const TArray<TSharedPtr<FAssetData>>& AssetDataToFilter)
+{
+	TMultiMap<FString, TSharedPtr<FAssetData>> AssetsInfoMap;
+	TArray<TSharedPtr<FAssetData>> DuplicatedAssetData;
+
+	for (const TSharedPtr<FAssetData>& AssetData : AssetDataToFilter)
+	{
+		AssetsInfoMap.Emplace(AssetData->AssetName.ToString(), AssetData);
+	}
+
+	for (const TSharedPtr<FAssetData>& AssetData : AssetDataToFilter)
+	{
+		TArray<TSharedPtr<FAssetData>> FoundNamesArray;
+
+		AssetsInfoMap.MultiFind(AssetData->AssetName.ToString(), FoundNamesArray);
+
+		if (FoundNamesArray.Num() <= 1) continue;
+
+		for (const TSharedPtr<FAssetData>& DuplicatedNameData : FoundNamesArray)
+		{
+			if (DuplicatedNameData.IsValid())
+			{
+				DuplicatedAssetData.AddUnique(DuplicatedNameData);
+			}
+		}
+	}
+
+	return DuplicatedAssetData;
 }
 
 #pragma endregion

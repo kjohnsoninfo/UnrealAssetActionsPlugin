@@ -14,27 +14,33 @@ public:
 	virtual void ShutdownModule() override;
 
 #pragma region ProcessDataForWidget
+	
+	/** Get count of all asset referencers
+	 *
+	 * @param AssetData: asset to get referencer count for
+	 */
+	int32 GetAssetReferencersCount(const TSharedPtr<FAssetData>& AssetData);
 
 	/** Delete assets marked for deletion by the user widget 
-	* 
-	* @return bool: returns true when function successfully deletes an asset, else returns false
-	* 
-	* @note: This is important because the widget calls different functions 
-	*		 based on whether or not assets were deleted.
-	*/
+	 * 
+	 * @return bool: returns true when function successfully deletes an asset, else returns false
+	 * 
+	 * @note: This is important because the widget calls different functions 
+	 *		 based on whether or not assets were deleted.
+	 */
 	bool DeleteAssetsInList(const TArray<FAssetData>& AssetsToDelete);
 
 	/** Get unused assets by filtering all assets
-	*
-	* @param AssetDataToFilter: array of assets to filter on
-	*/
+	 *
+	 * @param AssetDataToFilter: array of assets to filter on
+	 */
 	TArray<TSharedPtr<FAssetData>> FilterForUnusedAssetData(const TArray<TSharedPtr<FAssetData>>& AssetDataToFilter);
 
-	/** Get count of all asset referencers
-	*
-	* @param AssetData: asset to get referencer count for
-	*/
-	int32 GetAssetReferencersCount(const TSharedPtr<FAssetData>& AssetData);
+	/** Get unused assets by filtering all assets
+	 *
+	 * @param AssetDataToFilter: array of assets to filter on
+	 */
+	TArray<TSharedPtr<FAssetData>> FilterForDuplicateNameData(const TArray<TSharedPtr<FAssetData>>& AssetDataToFilter);
 
 #pragma endregion
 
@@ -74,7 +80,7 @@ private:
 
 	/** Create a new nomad tab */
 	TSharedRef<SDockTab> OnSpawnAssetActionsTab(const FSpawnTabArgs& AssetActionsTabArgs);
-	
+
 	/** Return an array of Asset Data under the folder that the user opened the right-click menu on */
 	TArray<TSharedPtr<FAssetData>> GetAllAssetDataUnderSelectedFolder();
 
