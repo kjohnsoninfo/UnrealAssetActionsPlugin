@@ -7,7 +7,7 @@
 
 namespace AssetActionsColumns
 {
-	static const FName Checkbox(TEXT("Checkbox"));
+	static const FName Checkbox(TEXT("Checkbox")); // unsortable
 	static const FName Class(TEXT("Class"));
 	static const FName Name(TEXT("Name")); 
 	static const FName Path(TEXT("Path")); 
@@ -15,9 +15,9 @@ namespace AssetActionsColumns
 	static const FName Delete(TEXT("Delete")); // unsortable
 }
 
-class SAdvancedDeletionTab : public SCompoundWidget
+class SAssetActionsTab : public SCompoundWidget
 {
-	SLATE_BEGIN_ARGS(SAdvancedDeletionTab) {}
+	SLATE_BEGIN_ARGS(SAssetActionsTab) {}
 
 		/**
 		 * Argument used to pass asset data between manager and widget
@@ -46,7 +46,9 @@ private:
 #pragma region TitleSlot
 	
 	/** Display a title at the top of the widget */
-	TSharedRef<STextBlock> ConstructTitleTextForTab(const FString& TitleText);
+	TSharedRef<STextBlock> ConstructLabelText(const FString& LabelText);
+
+	TSharedRef<STextBlock> ConstructTitleText(const FString& TitleText);
 
 	/** Construct Help Button and when clicked, go to documentation webpage */
 	TSharedRef<SButton> ConstructHelpButton();
@@ -99,6 +101,9 @@ private:
 
 	/** Construct SListView to display all assets in selected folder */
 	TSharedRef<SListView<TSharedPtr<FAssetData>>> ConstructAssetListView();
+
+	/** Construct header row label for each column */
+	TSharedRef<STextBlock> ConstructTextForHeaderRow(const FString& ColumnName);
 
 	/** 
 	 * Delegate function to get sort mode for each column

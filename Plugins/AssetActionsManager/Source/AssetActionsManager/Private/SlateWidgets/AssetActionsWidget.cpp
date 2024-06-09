@@ -1,12 +1,12 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "SlateWidgets/AdvancedDeletionWidget.h"
+#include "SlateWidgets/AssetActionsWidget.h"
 #include "DebugHelper.h"
 #include "AssetActionsManager.h"
 #include "EditorAssetLibrary.h"
 
-#define LOCTEXT_NAMESPACE "SAdvancedDeletionTab"
+#define LOCTEXT_NAMESPACE "SAssetActionsTab"
 #define DeleteSelected TEXT("Delete Selected")
 #define SelectAll TEXT("Select All")
 #define DeselectAll TEXT("Deselect All")
@@ -14,7 +14,7 @@
 #define ListUnused TEXT("List Unused Assets")
 #define ListDuplicate TEXT("List Duplicate Name Assets")
 
-void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
+void SAssetActionsTab::Construct(const FArguments& InArgs)
 /*
 	Widget constructor that initializes all variables and Slate components
 */
@@ -52,10 +52,20 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 			[
 				SNew(SHorizontalBox)
 
-				// Title
+				// ComboBox Label
 				+ SHorizontalBox::Slot()
+				.VAlign(VAlign_Bottom)
+				.Padding(7.f)
 				[
-					ConstructTitleTextForTab(TEXT("ADVANCED DELETION"))
+					ConstructLabelText(TEXT("Filter List:"))
+				]
+
+				// ComboBox Label
+				+ SHorizontalBox::Slot()
+				.VAlign(VAlign_Bottom)
+				.Padding(5.f)
+				[
+					ConstructTitleText(TEXT("QUICK ASSET ACTIONS"))
 				]
 
 				// Help Icon
@@ -77,6 +87,7 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 				// Filter
 				+ SHorizontalBox::Slot()
 				.AutoWidth()
+				.Padding(5.f, 0.f)
 				[
 					ConstructFilterComboBox()
 				]
@@ -88,7 +99,7 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 				+ SHorizontalBox::Slot()
 				.HAlign(HAlign_Right)
 				.VAlign(VAlign_Top)
-				.Padding(5.f)
+				.Padding(5.f, 0.f)
 				[
 					ConstructRefreshButton()
 				]
@@ -97,6 +108,7 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 			// Third slot for list view
 			+ SVerticalBox::Slot()
 			.VAlign(VAlign_Fill)
+			.Padding(5.f)
 			[
 				SNew(SScrollBox)
 
@@ -116,6 +128,7 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 
 				// Number of assets in list
 				+ SHorizontalBox::Slot()
+				.Padding(10.f, 5.f)
 				[
 					ConstructTextForAssetCount()
 				]
@@ -124,6 +137,7 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 				+ SHorizontalBox::Slot()
 				.HAlign(HAlign_Right)
 				.FillWidth(12.f)
+				.Padding(10.f, 5.f)
 				[
 					ConstructTextForSelectedFolderPath()
 				]
@@ -164,7 +178,24 @@ void SAdvancedDeletionTab::Construct(const FArguments& InArgs)
 
 #pragma region TitleBar
 
-TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTitleTextForTab(const FString& TitleText)
+TSharedRef<STextBlock> SAssetActionsTab::ConstructLabelText(const FString& LabelText)
+/*
+	Construct a STextBlock for the label above the ComboBox widget
+*/
+{
+	FSlateFontInfo LabelFont = GetEmbossedFont();
+	LabelFont.Size = 10;
+
+	TSharedRef<STextBlock> ConstructedTextBlock =
+		SNew(STextBlock)
+		.Text(FText::FromString(LabelText))
+		.Font(LabelFont)
+		.ColorAndOpacity(FColor::White);
+
+	return ConstructedTextBlock;
+}
+
+TSharedRef<STextBlock> SAssetActionsTab::ConstructTitleText(const FString& TitleText)
 /*
 	Construct a STextBlock for the Title Text at the top of the widget
 */
@@ -173,14 +204,13 @@ TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTitleTextForTab(const FStr
 		SNew(STextBlock)
 		.Text(FText::FromString(TitleText))
 		.Font(SharedTextFont)
-		.Justification(ETextJustify::Left)
-		.Margin(FMargin(10.f))
+		.Justification(ETextJustify::Center)
 		.ColorAndOpacity(FColor::White);
 
 	return ConstructedTextBlock;
 }
 
-TSharedRef<SButton> SAdvancedDeletionTab::ConstructHelpButton()
+TSharedRef<SButton> SAssetActionsTab::ConstructHelpButton()
 /*
 	Construct a help button that opens a webpage in the browser that points to documentation for the widget
 */
@@ -191,7 +221,7 @@ TSharedRef<SButton> SAdvancedDeletionTab::ConstructHelpButton()
 		.ToolTipText(LOCTEXT("HelpDocumentationToolTip", "Go to documentation for Advanced Deletion"))
 		.ContentPadding(FMargin(5.f))
 		
-		.OnClicked(this, &SAdvancedDeletionTab::OnHelpButtonClicked)
+		.OnClicked(this, &SAssetActionsTab::OnHelpButtonClicked)
 		[
 			SNew(SImage)
 				.ColorAndOpacity(FSlateColor::UseForeground())
@@ -202,7 +232,7 @@ TSharedRef<SButton> SAdvancedDeletionTab::ConstructHelpButton()
 	return ConstructedHelpButton;
 }
 
-FReply SAdvancedDeletionTab::OnHelpButtonClicked()
+FReply SAssetActionsTab::OnHelpButtonClicked()
 /*
 	When help button is clicked, launch the specified url
 */
@@ -217,7 +247,7 @@ FReply SAdvancedDeletionTab::OnHelpButtonClicked()
 
 #pragma region FilterSlot
 
-TSharedRef<SComboBox<TSharedPtr<FString>>> SAdvancedDeletionTab::ConstructFilterComboBox()
+TSharedRef<SComboBox<TSharedPtr<FString>>> SAssetActionsTab::ConstructFilterComboBox()
 /* 
 	Construct a combo box that contains and applies criteria to filter list view 
 */
@@ -225,8 +255,8 @@ TSharedRef<SComboBox<TSharedPtr<FString>>> SAdvancedDeletionTab::ConstructFilter
 	TSharedRef<SComboBox<TSharedPtr<FString>>> ConstructedComboBox =
 		SNew(SComboBox<TSharedPtr<FString>>)
 		.OptionsSource(&FilterListItems)
-		.OnGenerateWidget(this, &SAdvancedDeletionTab::OnGenerateFilterItem) // must generate an SWidget
-		.OnSelectionChanged(this, &SAdvancedDeletionTab::OnFilterSelectionChanged)
+		.OnGenerateWidget(this, &SAssetActionsTab::OnGenerateFilterItem) // must generate an SWidget
+		.OnSelectionChanged(this, &SAssetActionsTab::OnFilterSelectionChanged)
 		// Combo Box has a slot for text shown on construction
 		[
 			SAssignNew(ComboBoxDisplayedText, STextBlock)
@@ -236,7 +266,7 @@ TSharedRef<SComboBox<TSharedPtr<FString>>> SAdvancedDeletionTab::ConstructFilter
 	return ConstructedComboBox;
 }
 
-TSharedRef<SWidget> SAdvancedDeletionTab::OnGenerateFilterItem(TSharedPtr<FString> FilterItem)
+TSharedRef<SWidget> SAssetActionsTab::OnGenerateFilterItem(TSharedPtr<FString> FilterItem)
 /*
 	Construct a TextBlock for every filter item in the FilterListItems to display as options 
 */
@@ -249,7 +279,7 @@ TSharedRef<SWidget> SAdvancedDeletionTab::OnGenerateFilterItem(TSharedPtr<FStrin
 }
 
 // 
-void SAdvancedDeletionTab::OnFilterSelectionChanged(TSharedPtr<FString> SelectedFilter, ESelectInfo::Type InSelectInfo)
+void SAssetActionsTab::OnFilterSelectionChanged(TSharedPtr<FString> SelectedFilter, ESelectInfo::Type InSelectInfo)
 /* 
 	Update ComboBox text and call appropriate filtering functions based on the user selected filter option 
 	@note: OnSelectionChange requires a selectinfo parameter (see SComboBox.h from source)
@@ -288,7 +318,7 @@ void SAdvancedDeletionTab::OnFilterSelectionChanged(TSharedPtr<FString> Selected
 }
 
 
-TSharedRef<SButton> SAdvancedDeletionTab::ConstructRefreshButton()
+TSharedRef<SButton> SAssetActionsTab::ConstructRefreshButton()
 /*
 	Construct a refresh button that calls refresh asset list view fn
 */
@@ -299,7 +329,7 @@ TSharedRef<SButton> SAdvancedDeletionTab::ConstructRefreshButton()
 		.ToolTipText(LOCTEXT("RefreshBtnToolTip", "Refresh asset list view"))
 		.ContentPadding(FMargin(5.f))
 
-		.OnClicked(this, &SAdvancedDeletionTab::OnRefreshButtonClicked)
+		.OnClicked(this, &SAssetActionsTab::OnRefreshButtonClicked)
 		[
 			SNew(SImage)
 				.ColorAndOpacity(FSlateColor::UseForeground())
@@ -310,7 +340,7 @@ TSharedRef<SButton> SAdvancedDeletionTab::ConstructRefreshButton()
 	return ConstructedRefreshButton;
 }
 
-FReply SAdvancedDeletionTab::OnRefreshButtonClicked()
+FReply SAssetActionsTab::OnRefreshButtonClicked()
 /*
 	When refresh button is clicked, refresh asset list view
 */
@@ -324,7 +354,7 @@ FReply SAdvancedDeletionTab::OnRefreshButtonClicked()
 
 #pragma region ListView
 
-TSharedRef<SListView<TSharedPtr<FAssetData>>> SAdvancedDeletionTab::ConstructAssetListView()
+TSharedRef<SListView<TSharedPtr<FAssetData>>> SAssetActionsTab::ConstructAssetListView()
 /*
 	Construct a SListView that generates rows for each asset found in the selected folder
 */
@@ -333,40 +363,61 @@ TSharedRef<SListView<TSharedPtr<FAssetData>>> SAdvancedDeletionTab::ConstructAss
 		SNew(SListView<TSharedPtr<FAssetData>>)
 		.ItemHeight(24.f) // height of each row
 		.ListItemsSource(&DisplayedAssetsData) // pointer to array of source items
-		.OnGenerateRow(this, &SAdvancedDeletionTab::OnGenerateRowForListView) // create row for every asset found
+		.OnGenerateRow(this, &SAssetActionsTab::OnGenerateRowForListView) // create row for every asset found
 		.HeaderRow
 		(
 			SNew(SHeaderRow)
 
 			+ SHeaderRow::Column(AssetActionsColumns::Checkbox)
 			.FillWidth(.2f)
+			.VAlignHeader(EVerticalAlignment::VAlign_Center)
+			.HAlignHeader(EHorizontalAlignment::HAlign_Center)
+			[
+				ConstructTextForHeaderRow(TEXT("\u2713"))
+			]
 
 			+ SHeaderRow::Column(AssetActionsColumns::Class)
-			.FillWidth(1.5f)
-			.DefaultLabel(FText::FromString(TEXT("Asset Type")))
-			.SortMode(this, &SAdvancedDeletionTab::GetSortModeForColumn, AssetActionsColumns::Class)
-			.OnSort(this, &SAdvancedDeletionTab::OnSortModeChanged)
+			.FillWidth(1.9f)
+			.VAlignHeader(EVerticalAlignment::VAlign_Center)
+			.HAlignHeader(EHorizontalAlignment::HAlign_Center)
+			.SortMode(this, &SAssetActionsTab::GetSortModeForColumn, AssetActionsColumns::Class)
+			.OnSort(this, &SAssetActionsTab::OnSortModeChanged)
+			[
+				ConstructTextForHeaderRow(TEXT("Asset Type"))
+			]
 
 			+ SHeaderRow::Column(AssetActionsColumns::Name)
-			.FillWidth(2.f)
-			.DefaultLabel(FText::FromString(TEXT("Asset Name")))
-			.SortMode(this, &SAdvancedDeletionTab::GetSortModeForColumn, AssetActionsColumns::Name)
-			.OnSort(this, &SAdvancedDeletionTab::OnSortModeChanged)
+			.FillWidth(2.7f)
+			.VAlignHeader(EVerticalAlignment::VAlign_Center)
+			.HAlignHeader(EHorizontalAlignment::HAlign_Center)
+			.SortMode(this, &SAssetActionsTab::GetSortModeForColumn, AssetActionsColumns::Name)
+			.OnSort(this, &SAssetActionsTab::OnSortModeChanged)
+			[
+				ConstructTextForHeaderRow(TEXT("Asset Name"))
+			]
 
 			+ SHeaderRow::Column(AssetActionsColumns::Path)
-			.FillWidth(2.5f)
-			.DefaultLabel(FText::FromString(TEXT("Asset Parent Folder")))
-			.SortMode(this, &SAdvancedDeletionTab::GetSortModeForColumn, AssetActionsColumns::Path)
-			.OnSort(this, &SAdvancedDeletionTab::OnSortModeChanged)
+			.FillWidth(3.f)
+			.VAlignHeader(EVerticalAlignment::VAlign_Center)
+			.HAlignHeader(EHorizontalAlignment::HAlign_Center)
+			.SortMode(this, &SAssetActionsTab::GetSortModeForColumn, AssetActionsColumns::Path)
+			.OnSort(this, &SAssetActionsTab::OnSortModeChanged)
+			[
+				ConstructTextForHeaderRow(TEXT("Asset Parent Folder"))
+			]
 
 			+ SHeaderRow::Column(AssetActionsColumns::RefCount)
-			.FillWidth(2.5f)
-			.DefaultLabel(FText::FromString(TEXT("Ref Count")))
-			.SortMode(this, &SAdvancedDeletionTab::GetSortModeForColumn, AssetActionsColumns::RefCount)
-			.OnSort(this, &SAdvancedDeletionTab::OnSortModeChanged)
+			.FillWidth(.7f)
+			.VAlignHeader(EVerticalAlignment::VAlign_Center)
+			.HAlignHeader(EHorizontalAlignment::HAlign_Center)
+			.SortMode(this, &SAssetActionsTab::GetSortModeForColumn, AssetActionsColumns::RefCount)
+			.OnSort(this, &SAssetActionsTab::OnSortModeChanged)
+			[
+				ConstructTextForHeaderRow(TEXT("Ref Count"))
+			]
 
 			+ SHeaderRow::Column(AssetActionsColumns::Delete)
-			.FillWidth(.7f)
+			.FillWidth(.8f)
 			.DefaultLabel(FText::FromString(TEXT("")))
 		);
 
@@ -375,7 +426,25 @@ TSharedRef<SListView<TSharedPtr<FAssetData>>> SAdvancedDeletionTab::ConstructAss
 	return ConstructedAssetListView.ToSharedRef(); // convert to ref after construction
 }
 
-void SAdvancedDeletionTab::DefaultSorting()
+TSharedRef<STextBlock> SAssetActionsTab::ConstructTextForHeaderRow(const FString& ColumnName)
+/*
+	Construct an STextBlock for each header row that displays the column name passed in
+*/
+{
+	TSharedRef<STextBlock> ConstructedTextBlock =
+		SNew(STextBlock)
+		.Text(FText::FromString(ColumnName));
+
+	// Fixes formatting for path column
+	if (ColumnName == TEXT("Asset Parent Folder"))
+	{
+		ConstructedTextBlock->SetMargin(FMargin(35.f, 0.f, 0.f, 0.f));
+	}
+
+	return ConstructedTextBlock;
+}
+
+void SAssetActionsTab::DefaultSorting()
 /*
 	Sets default sort column, sort mode, and sorting on widget spawn
 */
@@ -387,7 +456,7 @@ void SAdvancedDeletionTab::DefaultSorting()
 		{ return A->AssetName.Compare(B->AssetName) < 0; });
 }
 
-EColumnSortMode::Type SAdvancedDeletionTab::GetSortModeForColumn(const FName ColumnId) const
+EColumnSortMode::Type SAssetActionsTab::GetSortModeForColumn(const FName ColumnId) const
 /*
 	Get the sort mode of the column when user selects column to sort by.
 	If user selected column does not equal column passed in from header row, set sort mode to none
@@ -396,7 +465,7 @@ EColumnSortMode::Type SAdvancedDeletionTab::GetSortModeForColumn(const FName Col
 	return SortByColumn == ColumnId ? SortMode : EColumnSortMode::None;
 }
 
-void SAdvancedDeletionTab::OnSortModeChanged(const EColumnSortPriority::Type SortPriority, const FName& ColumnId, const EColumnSortMode::Type InSortMode)
+void SAssetActionsTab::OnSortModeChanged(const EColumnSortPriority::Type SortPriority, const FName& ColumnId, const EColumnSortMode::Type InSortMode)
 /*
 	Set sort column and sort mode to user selected option. Then refresh widget which updates the applied sort order. 
 */
@@ -406,9 +475,10 @@ void SAdvancedDeletionTab::OnSortModeChanged(const EColumnSortPriority::Type Sor
 	RefreshWidget();
 }
 
-void SAdvancedDeletionTab::UpdateSorting()
+void SAssetActionsTab::UpdateSorting()
 /*
-	Sort DisplayedAssetData by comparing the data within the user selected column; called in RefreshWidget 
+	Sort DisplayedAssetData by comparing the data within the user selected column; called in RefreshWidget
+	Utilizes lambda expressions to define sorting functions
 */
 {
 	// Sort alphabetically by asset name
@@ -465,7 +535,8 @@ void SAdvancedDeletionTab::UpdateSorting()
 
 		if (SortMode == EColumnSortMode::Ascending)
 		{
-			DisplayedAssetsData.Sort([&](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
+			DisplayedAssetsData.Sort(
+				[&](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
 				{
 					int32 CountA = AssetActionsManager.GetAssetReferencersCount(A);
 					int32 CountB = AssetActionsManager.GetAssetReferencersCount(B);
@@ -475,7 +546,8 @@ void SAdvancedDeletionTab::UpdateSorting()
 		}
 		else
 		{
-			DisplayedAssetsData.Sort([&](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
+			DisplayedAssetsData.Sort(
+				[&](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
 				{
 					int32 CountA = AssetActionsManager.GetAssetReferencersCount(A);
 					int32 CountB = AssetActionsManager.GetAssetReferencersCount(B);
@@ -490,7 +562,7 @@ void SAdvancedDeletionTab::UpdateSorting()
 
 #pragma region RowsInListView
 
-TSharedRef<ITableRow> SAdvancedDeletionTab::OnGenerateRowForListView(TSharedPtr<FAssetData> AssetDataToDisplay, const TSharedRef<STableViewBase>& OwnerTable)
+TSharedRef<ITableRow> SAssetActionsTab::OnGenerateRowForListView(TSharedPtr<FAssetData> AssetDataToDisplay, const TSharedRef<STableViewBase>& OwnerTable)
 /*
 	Generate a STableRow for every asset and define child layout and widgets for each row
 */
@@ -578,7 +650,7 @@ TSharedRef<ITableRow> SAdvancedDeletionTab::OnGenerateRowForListView(TSharedPtr<
 		return RowWidgetForListView;
 }
 
-TSharedRef<SCheckBox> SAdvancedDeletionTab::ConstructCheckBoxes(const TSharedPtr<FAssetData>& AssetDataToDisplay)
+TSharedRef<SCheckBox> SAssetActionsTab::ConstructCheckBoxes(const TSharedPtr<FAssetData>& AssetDataToDisplay)
 /*
 	Generate a SCheckBox for each row and add to CheckBoxesArray
 */
@@ -586,14 +658,14 @@ TSharedRef<SCheckBox> SAdvancedDeletionTab::ConstructCheckBoxes(const TSharedPtr
 	TSharedRef<SCheckBox> ConstructedCheckBox =
 		SNew(SCheckBox)
 		.Type(ESlateCheckBoxType::CheckBox)
-		.OnCheckStateChanged(this, &SAdvancedDeletionTab::OnCheckBoxStateChanged, AssetDataToDisplay);
+		.OnCheckStateChanged(this, &SAssetActionsTab::OnCheckBoxStateChanged, AssetDataToDisplay);
 
 	CheckBoxesArray.Add(ConstructedCheckBox);
 
 	return ConstructedCheckBox;
 }
 
-void SAdvancedDeletionTab::OnCheckBoxStateChanged(ECheckBoxState CheckBoxState, TSharedPtr<FAssetData> ClickedAssetData)
+void SAssetActionsTab::OnCheckBoxStateChanged(ECheckBoxState CheckBoxState, TSharedPtr<FAssetData> ClickedAssetData)
 {
 	// Add or remove assets from delete array based on checkbox state
 	switch (CheckBoxState)
@@ -618,7 +690,7 @@ void SAdvancedDeletionTab::OnCheckBoxStateChanged(ECheckBoxState CheckBoxState, 
 	}
 }
 
-TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTextForRow(const FString& RowText)
+TSharedRef<STextBlock> SAssetActionsTab::ConstructTextForRow(const FString& RowText)
 /*
 	Common function to construct any textblocks for rows in the list view
 */
@@ -634,21 +706,21 @@ TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTextForRow(const FString& 
 	return ConstructedTextBlock;
 }
 
-TSharedRef<SButton> SAdvancedDeletionTab::ConstructDeleteButtonForRow(const TSharedPtr<FAssetData>& AssetDataToDisplay)
+TSharedRef<SButton> SAssetActionsTab::ConstructDeleteButtonForRow(const TSharedPtr<FAssetData>& AssetDataToDisplay)
 /*
 	Construct delete button that deletes a single asset for each row in the list view
 */
 {
 	TSharedRef<SButton> ConstructedDeleteButton =
 		SNew(SButton)
-		.OnClicked(this, &SAdvancedDeletionTab::OnDeleteButtonClicked, AssetDataToDisplay);
+		.OnClicked(this, &SAssetActionsTab::OnDeleteButtonClicked, AssetDataToDisplay);
 
 	ConstructedDeleteButton->SetContent(ConstructTextForRow(TEXT("Delete")));
 
 	return ConstructedDeleteButton;
 }
 
-FReply SAdvancedDeletionTab::OnDeleteButtonClicked(TSharedPtr<FAssetData> ClickedAssetData) 
+FReply SAssetActionsTab::OnDeleteButtonClicked(TSharedPtr<FAssetData> ClickedAssetData) 
 /*
 	Delete a single asset by passing in AssetDataToDisplay for the clicked row
 */
@@ -679,7 +751,7 @@ FReply SAdvancedDeletionTab::OnDeleteButtonClicked(TSharedPtr<FAssetData> Clicke
 
 #pragma region ButtonSlot
 
-TSharedRef<SButton> SAdvancedDeletionTab::ConstructButtonForSlot(const FString& ButtonName)
+TSharedRef<SButton> SAssetActionsTab::ConstructButtonForSlot(const FString& ButtonName)
 /*
 	Common function to construct buttons in the button slot
 */
@@ -703,7 +775,7 @@ TSharedRef<SButton> SAdvancedDeletionTab::ConstructButtonForSlot(const FString& 
 	return ConstructedSlotButton;
 }
 
-TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTextForButtonSlot(const FString& ButtonName)
+TSharedRef<STextBlock> SAssetActionsTab::ConstructTextForButtonSlot(const FString& ButtonName)
 {
 	TSharedRef<STextBlock> ConstructedTextForButtonSlot =
 		SNew(STextBlock)
@@ -715,7 +787,7 @@ TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTextForButtonSlot(const FS
 	return ConstructedTextForButtonSlot;
 }
 
-void SAdvancedDeletionTab::AssignButtonClickFns(const FString& ButtonName)
+void SAssetActionsTab::AssignButtonClickFns(const FString& ButtonName)
 /*
 	Assign the different onClicked fns to each button based on button name
 */
@@ -734,7 +806,7 @@ void SAdvancedDeletionTab::AssignButtonClickFns(const FString& ButtonName)
 	}
 }
 
-FReply SAdvancedDeletionTab::OnDeleteSelectedButtonClicked()
+FReply SAssetActionsTab::OnDeleteSelectedButtonClicked()
 /*
 	Deletes all assets in CheckedAssetsToDeleteArray
 */
@@ -774,7 +846,7 @@ FReply SAdvancedDeletionTab::OnDeleteSelectedButtonClicked()
 	return FReply::Handled();
 }
 
-FReply SAdvancedDeletionTab::OnSelectAllButtonClicked()
+FReply SAssetActionsTab::OnSelectAllButtonClicked()
 /*
 	Check state of checkboxes in CheckBoxesArray and toggle to checked if not already checked
 */
@@ -792,7 +864,7 @@ FReply SAdvancedDeletionTab::OnSelectAllButtonClicked()
 	return FReply::Handled();
 }
 
-FReply SAdvancedDeletionTab::OnDeselectAllButtonClicked()
+FReply SAssetActionsTab::OnDeselectAllButtonClicked()
 /*
 	Check state of checkboxes in CheckBoxesArray and toggle to unchecked if already checked
 */
@@ -813,7 +885,7 @@ FReply SAdvancedDeletionTab::OnDeselectAllButtonClicked()
 
 #pragma region HelpfulInfoSlot
 
-TSharedRef<SRichTextBlock> SAdvancedDeletionTab::ConstructTextForAssetCount()
+TSharedRef<SRichTextBlock> SAssetActionsTab::ConstructTextForAssetCount()
 {
 	const FTextBlockStyle TextBlockStyle = 
 		FTextBlockStyle().SetFont(SharedTextFont).SetColorAndOpacity(FColor::White);
@@ -827,7 +899,7 @@ TSharedRef<SRichTextBlock> SAdvancedDeletionTab::ConstructTextForAssetCount()
 	return ConstructedAssetCountTextBlock.ToSharedRef();
 }
 
-TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTextForSelectedFolderPath()
+TSharedRef<STextBlock> SAssetActionsTab::ConstructTextForSelectedFolderPath()
 {
 	FString SelectedFolderPathsText;
 	FString SelectedFolderDisplayedText;
@@ -879,7 +951,7 @@ TSharedRef<STextBlock> SAdvancedDeletionTab::ConstructTextForSelectedFolderPath(
 
 #pragma region HelperFunctions
 
-void SAdvancedDeletionTab::EnsureAssetDeletionFromLists(const TSharedPtr<FAssetData>& AssetDataToDelete)
+void SAssetActionsTab::EnsureAssetDeletionFromLists(const TSharedPtr<FAssetData>& AssetDataToDelete)
 {
 	if (DisplayedAssetsData.Contains(AssetDataToDelete))
 	{
@@ -892,7 +964,7 @@ void SAdvancedDeletionTab::EnsureAssetDeletionFromLists(const TSharedPtr<FAssetD
 	}
 }
 
-void SAdvancedDeletionTab::RefreshWidget()
+void SAssetActionsTab::RefreshWidget()
 /*
 	Refresh to ensure AssetListView and AssetCount is always up to date
 */

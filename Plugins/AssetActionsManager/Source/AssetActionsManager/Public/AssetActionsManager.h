@@ -61,19 +61,19 @@ private:
 	void AddCBMenuEntry(FMenuBuilder& MenuBuilder);
 
 	/** Spawn tab when the Advanced Deletion menu entry is clicked */
-	void OnAdvancedDeleteMenuEntryClicked();
+	void OnAssetActionsMenuEntryClicked();
 
 	/** Fix up redirectors when tab is spawned to ensure asset file paths are accurate */
 	void FixUpRedirectors();
 #pragma endregion
 
-#pragma region AdvancedDeletionTab
+#pragma region AssetActionsTab
 
 	/** Register newly created tab  */
-	void RegisterAdvancedDeletionTab();
+	void RegisterAssetActionsTab();
 
 	/** Create a new nomad tab */
-	TSharedRef<SDockTab> OnSpawnAdvancedDeletionTab(const FSpawnTabArgs& AdvancedDeletionTabArgs);
+	TSharedRef<SDockTab> OnSpawnAssetActionsTab(const FSpawnTabArgs& AssetActionsTabArgs);
 	
 	/** Return an array of Asset Data under the folder that the user opened the right-click menu on */
 	TArray<TSharedPtr<FAssetData>> GetAllAssetDataUnderSelectedFolder();

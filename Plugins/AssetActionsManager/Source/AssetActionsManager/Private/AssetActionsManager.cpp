@@ -3,7 +3,7 @@
 #include "AssetActionsManager.h"
 #include "DebugHelper.h"
 #include "ContentBrowserModule.h" 
-#include "SlateWidgets/AdvancedDeletionWidget.h"
+#include "SlateWidgets/AssetActionsWidget.h"
 #include "EditorAssetLibrary.h"
 #include "ObjectTools.h"
 #include "AssetToolsModule.h"
@@ -15,7 +15,7 @@
 void FAssetActionsManagerModule::StartupModule()
 {
 	InitCBMenuExtension();
-	RegisterAdvancedDeletionTab();
+	RegisterAssetActionsTab();
 }
 
 #pragma region ExtendContentBrowserMenu
@@ -71,20 +71,20 @@ void FAssetActionsManagerModule::AddCBMenuEntry(FMenuBuilder& MenuBuilder)
 {
 	MenuBuilder.AddMenuEntry
 	(
-		FText::FromString("Advanced Deletion"), // Name
-		FText::FromString("Search and delete assets under a selected folder"), // ToolTip
+		FText::FromString("Quick Asset Actions"), // Name
+		FText::FromString("Search assets under a selected folder to perform actions on"), // ToolTip
 		FSlateIcon(),
-		FExecuteAction::CreateRaw(this, &FAssetActionsManagerModule::OnAdvancedDeleteMenuEntryClicked) // Third delegate bind to member fn
+		FExecuteAction::CreateRaw(this, &FAssetActionsManagerModule::OnAssetActionsMenuEntryClicked) // Third delegate bind to member fn
 	);
 }
 
-void FAssetActionsManagerModule::OnAdvancedDeleteMenuEntryClicked()
+void FAssetActionsManagerModule::OnAssetActionsMenuEntryClicked()
 {
 	// Fix up redirectors if needed
 	FixUpRedirectors();
 
 	// Spawn tab 
-	FGlobalTabmanager::Get()->TryInvokeTab(FName("AdvancedDeletion"));
+	FGlobalTabmanager::Get()->TryInvokeTab(FName("AssetActions"));
 }
 
 void FAssetActionsManagerModule::FixUpRedirectors()
@@ -136,17 +136,17 @@ void FAssetActionsManagerModule::FixUpRedirectors()
 
 #pragma endregion
 
-#pragma region AdvancedDeletionTab
+#pragma region AssetActionsTab
 
-void FAssetActionsManagerModule::RegisterAdvancedDeletionTab()
+void FAssetActionsManagerModule::RegisterAssetActionsTab()
 {
-	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(FName("AdvancedDeletion"),
-		FOnSpawnTab::CreateRaw(this, &FAssetActionsManagerModule::OnSpawnAdvancedDeletionTab))
-		.SetDisplayName(FText::FromString(TEXT("Advanced Deletion")))
+	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(FName("AssetActions"),
+		FOnSpawnTab::CreateRaw(this, &FAssetActionsManagerModule::OnSpawnAssetActionsTab))
+		.SetDisplayName(FText::FromString(TEXT("Quick Asset Actions")))
 		.SetAutoGenerateMenuEntry(false);
 }
 
-TSharedRef<SDockTab> FAssetActionsManagerModule::OnSpawnAdvancedDeletionTab(const FSpawnTabArgs& AdvancedDeletionTabArgs)
+TSharedRef<SDockTab> FAssetActionsManagerModule::OnSpawnAssetActionsTab(const FSpawnTabArgs& AssetActionsTabArgs)
 /*
 	Construct an SDockTab and assign the SLATE_ARGUMENT in the widget to the asset data found in the selected folder
 */
@@ -154,7 +154,7 @@ TSharedRef<SDockTab> FAssetActionsManagerModule::OnSpawnAdvancedDeletionTab(cons
 	return
 		SNew(SDockTab).TabRole(ETabRole::NomadTab)
 		[
-			SNew(SAdvancedDeletionTab)
+			SNew(SAssetActionsTab)
 				.AllAssetsDataFromManager(GetAllAssetDataUnderSelectedFolder()) // matches the SLATE_ARGUMENT in widget file
 				.SelectedFoldersPaths(SelectedFolderPaths)
 		];
@@ -257,7 +257,7 @@ TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::FilterForUnusedAssetD
 
 void FAssetActionsManagerModule::ShutdownModule()
 {
-	FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(FName("AdvancedDeletion"));
+	FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(FName("AssetActions"));
 }
 
 #undef LOCTEXT_NAMESPACE
