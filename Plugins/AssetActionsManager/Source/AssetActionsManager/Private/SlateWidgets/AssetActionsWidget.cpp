@@ -22,13 +22,12 @@ void SAssetActionsTab::Construct(const FArguments& InArgs)
 	bCanSupportFocus = true;
 
 	// Ensure clean slate when constructed
-	CheckBoxesArray.Empty();
-	CheckedAssetsToDelete.Empty();
 	FilterListItems.Empty();
 
 	// Grab data from manager
 	AllAssetsDataFromManager = InArgs._AllAssetsDataFromManager;
 	DisplayedAssetsData = AllAssetsDataFromManager; // set display data to all by default
+	UncheckedAssets = DisplayedAssetsData; // all assets are unchecked on spawn
 	SelectedFoldersPaths = InArgs._SelectedFoldersPaths; 
 
 	AssetCountMsg = GetAssetCountMsg();
@@ -310,9 +309,16 @@ void SAssetActionsTab::OnFilterSelectionChanged(TSharedPtr<FString> SelectedFilt
 		RefreshWidget();
 	}
 
-	// Display assets with the same name
+	// Display assets with duplicate names 
 	else if (SelectedFilterText == ListDuplicate)
 	{
+		//// Load Manager
+		//FAssetActionsManagerModule& AssetActionsManager =
+		//	FModuleManager::LoadModuleChecked<FAssetActionsManagerModule>(TEXT("AssetActionsManager"));
+
+		//// Filter items
+		//DisplayedAssetsData = AssetActionsManager.FilterForUnusedAssetData(AllAssetsDataFromManager);
+
 		return;
 	}
 }
@@ -369,9 +375,11 @@ TSharedRef<SListView<TSharedPtr<FAssetData>>> SAssetActionsTab::ConstructAssetLi
 			SNew(SHeaderRow)
 
 			+ SHeaderRow::Column(AssetActionsColumns::Checkbox)
-			.FillWidth(.2f)
+			.FillWidth(.3f)
 			.VAlignHeader(EVerticalAlignment::VAlign_Center)
 			.HAlignHeader(EHorizontalAlignment::HAlign_Center)
+			.SortMode(this, &SAssetActionsTab::GetSortModeForColumn, AssetActionsColumns::Checkbox)
+			.OnSort(this, &SAssetActionsTab::OnSortModeChanged)
 			[
 				ConstructTextForHeaderRow(TEXT("\u2713"))
 			]
@@ -481,6 +489,43 @@ void SAssetActionsTab::UpdateSorting()
 	Utilizes lambda expressions to define sorting functions
 */
 {
+
+	// Sort by checked alphabetically and unchecked alphabetically
+	if (SortByColumn == AssetActionsColumns::Checkbox)
+	{
+		if (SortMode == EColumnSortMode::Ascending)
+		{
+			TArray<TSharedPtr<FAssetData>> SortedCheckedAssets = CheckedAssets;
+			TArray<TSharedPtr<FAssetData>> SortedUncheckedAssets = UncheckedAssets;
+
+			SortedCheckedAssets.Sort([](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
+			{ return A->AssetName.Compare(B->AssetName) < 0; }); // A->Z
+
+			SortedUncheckedAssets.Sort([](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
+			{ return A->AssetName.Compare(B->AssetName) < 0; }); // A->Z
+
+			DisplayedAssetsData.Empty();
+			DisplayedAssetsData.Append(CheckedAssets);
+			DisplayedAssetsData.Append(UncheckedAssets);
+		}
+		else
+		{
+			TArray<TSharedPtr<FAssetData>> SortedCheckedAssets = CheckedAssets;
+			TArray<TSharedPtr<FAssetData>> SortedUncheckedAssets = UncheckedAssets;
+
+			SortedCheckedAssets.Sort([](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
+				{ return A->AssetName.Compare(B->AssetName) < 0; }); // A->Z
+
+			SortedUncheckedAssets.Sort([](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
+				{ return A->AssetName.Compare(B->AssetName) < 0; }); // A->Z
+
+			DisplayedAssetsData.Empty();
+			DisplayedAssetsData.Append(UncheckedAssets);
+			DisplayedAssetsData.Append(CheckedAssets);
+		}
+	}
+
+
 	// Sort alphabetically by asset name
 	if (SortByColumn == AssetActionsColumns::Name)
 	{
@@ -592,9 +637,9 @@ TSharedRef<ITableRow> SAssetActionsTab::OnGenerateRowForListView(TSharedPtr<FAss
 
 				// First slot for checkbox
 				+ SHorizontalBox::Slot()
-				.HAlign(HAlign_Left)
+				.HAlign(HAlign_Center)
 				.VAlign(VAlign_Center)
-				.FillWidth(.1f)
+				.FillWidth(.15f)
 				[
 					ConstructCheckBoxes(AssetDataToDisplay)
 				]
@@ -652,7 +697,7 @@ TSharedRef<ITableRow> SAssetActionsTab::OnGenerateRowForListView(TSharedPtr<FAss
 
 TSharedRef<SCheckBox> SAssetActionsTab::ConstructCheckBoxes(const TSharedPtr<FAssetData>& AssetDataToDisplay)
 /*
-	Generate a SCheckBox for each row and add to CheckBoxesArray
+	Generate a SCheckBox for each row, add to CheckBoxMap, and set checkbox to previously checked state
 */
 {
 	TSharedRef<SCheckBox> ConstructedCheckBox =
@@ -660,7 +705,24 @@ TSharedRef<SCheckBox> SAssetActionsTab::ConstructCheckBoxes(const TSharedPtr<FAs
 		.Type(ESlateCheckBoxType::CheckBox)
 		.OnCheckStateChanged(this, &SAssetActionsTab::OnCheckBoxStateChanged, AssetDataToDisplay);
 
-	CheckBoxesArray.Add(ConstructedCheckBox);
+	CheckBoxesMap.Add(AssetDataToDisplay, ConstructedCheckBox);
+
+	// set previously checked state
+	if (CheckedAssets.Contains(AssetDataToDisplay))
+	{
+		if (!CheckBoxesMap[AssetDataToDisplay]->IsChecked())
+		{
+			CheckBoxesMap[AssetDataToDisplay]->SetIsChecked(ECheckBoxState::Checked);
+		}
+	}
+
+	else if (UncheckedAssets.Contains(AssetDataToDisplay))
+	{
+		if (CheckBoxesMap[AssetDataToDisplay]->IsChecked())
+		{
+			CheckBoxesMap[AssetDataToDisplay]->SetIsChecked(ECheckBoxState::Unchecked);
+		}
+	}
 
 	return ConstructedCheckBox;
 }
@@ -672,15 +734,22 @@ void SAssetActionsTab::OnCheckBoxStateChanged(ECheckBoxState CheckBoxState, TSha
 	{
 	case ECheckBoxState::Unchecked:
 
-		if (CheckedAssetsToDelete.Contains(ClickedAssetData))
+		UncheckedAssets.AddUnique(ClickedAssetData);
+
+		if (CheckedAssets.Contains(ClickedAssetData))
 		{
-			CheckedAssetsToDelete.Remove(ClickedAssetData);
+			CheckedAssets.Remove(ClickedAssetData);
 		}
 
 		break;
 	case ECheckBoxState::Checked:
 
-		CheckedAssetsToDelete.AddUnique(ClickedAssetData);
+		CheckedAssets.AddUnique(ClickedAssetData);
+
+		if (UncheckedAssets.Contains(ClickedAssetData))
+		{
+			UncheckedAssets.Remove(ClickedAssetData);
+		}
 
 		break;
 	case ECheckBoxState::Undetermined:
@@ -811,7 +880,7 @@ FReply SAssetActionsTab::OnDeleteSelectedButtonClicked()
 	Deletes all assets in CheckedAssetsToDeleteArray
 */
 {
-	if (CheckedAssetsToDelete.Num() == 0)
+	if (CheckedAssets.Num() == 0)
 	{
 		DebugHelper::MessageDialogBox(EAppMsgType::Ok, TEXT("No assets selected."));
 		return FReply::Handled();
@@ -820,7 +889,7 @@ FReply SAssetActionsTab::OnDeleteSelectedButtonClicked()
 	// Convert array of ptr to array of FAssetData for delete fn
 	TArray<FAssetData> AssetsToDelete;
 		
-	for (const TSharedPtr<FAssetData>& AssetData : CheckedAssetsToDelete)
+	for (const TSharedPtr<FAssetData>& AssetData : CheckedAssets)
 	{
 		AssetsToDelete.Add(*AssetData.Get());
 	}
@@ -835,7 +904,7 @@ FReply SAssetActionsTab::OnDeleteSelectedButtonClicked()
 	// Remove from list view if asset was deleted
 	if (bAssetDeleted)
 	{
-		for (const TSharedPtr<FAssetData>& DeletedAsset : CheckedAssetsToDelete)
+		for (const TSharedPtr<FAssetData>& DeletedAsset : CheckedAssets)
 		{
 			EnsureAssetDeletionFromLists(DeletedAsset);
 		}
@@ -851,13 +920,13 @@ FReply SAssetActionsTab::OnSelectAllButtonClicked()
 	Check state of checkboxes in CheckBoxesArray and toggle to checked if not already checked
 */
 {
-	if (CheckBoxesArray.Num() == 0) return FReply::Handled();
+	if (CheckBoxesMap.Num() == 0) return FReply::Handled();
 
-	for (const TSharedRef<SCheckBox> CheckBox : CheckBoxesArray)
+	for (auto& CheckBox : CheckBoxesMap)
 	{
-		if (!CheckBox->IsChecked())
+		if (!CheckBox.Value->IsChecked())
 		{
-			CheckBox->ToggleCheckedState();
+			CheckBox.Value->ToggleCheckedState();
 		}
 	}
 
@@ -866,16 +935,16 @@ FReply SAssetActionsTab::OnSelectAllButtonClicked()
 
 FReply SAssetActionsTab::OnDeselectAllButtonClicked()
 /*
-	Check state of checkboxes in CheckBoxesArray and toggle to unchecked if already checked
+	Check state of checkboxes in CheckBoxesMap and toggle to unchecked if already checked
 */
 {
-	if (CheckBoxesArray.Num() == 0) return FReply::Handled();
+	if (CheckBoxesMap.Num() == 0) return FReply::Handled();
 
-	for (const TSharedRef<SCheckBox> CheckBox : CheckBoxesArray)
+	for (auto& CheckBox : CheckBoxesMap)
 	{
-		if (CheckBox->IsChecked())
+		if (CheckBox.Value->IsChecked())
 		{
-			CheckBox->ToggleCheckedState();
+			CheckBox.Value->ToggleCheckedState();
 		}
 	}
 	return FReply::Handled();
@@ -951,28 +1020,11 @@ TSharedRef<STextBlock> SAssetActionsTab::ConstructTextForSelectedFolderPath()
 
 #pragma region HelperFunctions
 
-void SAssetActionsTab::EnsureAssetDeletionFromLists(const TSharedPtr<FAssetData>& AssetDataToDelete)
-{
-	if (DisplayedAssetsData.Contains(AssetDataToDelete))
-	{
-		DisplayedAssetsData.Remove(AssetDataToDelete);
-	}
-
-	if (AllAssetsDataFromManager.Contains(AssetDataToDelete))
-	{
-		AllAssetsDataFromManager.Remove(AssetDataToDelete);
-	}
-}
-
 void SAssetActionsTab::RefreshWidget()
 /*
 	Refresh to ensure AssetListView and AssetCount is always up to date
 */
 {
-	// Ensure clean slate when refreshed
-	CheckBoxesArray.Empty();
-	CheckedAssetsToDelete.Empty();
-
 	// Refresh sorting
 	UpdateSorting();
 
@@ -990,6 +1042,26 @@ void SAssetActionsTab::RefreshWidget()
 		ConstructedAssetCountTextBlock->SetText(FText::FromString(AssetCountMsg));
 		ConstructedAssetCountTextBlock->Refresh();
 	}
+}
+
+void SAssetActionsTab::EnsureAssetDeletionFromLists(const TSharedPtr<FAssetData>& AssetDataToDelete)
+{
+	if (DisplayedAssetsData.Contains(AssetDataToDelete))
+	{
+		DisplayedAssetsData.Remove(AssetDataToDelete);
+	}
+
+	if (AllAssetsDataFromManager.Contains(AssetDataToDelete))
+	{
+		AllAssetsDataFromManager.Remove(AssetDataToDelete);
+	}
+}
+
+void SAssetActionsTab::ClearCheckedStates()
+{
+	CheckBoxesMap.Empty();
+	CheckedAssets.Empty();
+	UncheckedAssets.Empty();
 }
 
 #pragma endregion

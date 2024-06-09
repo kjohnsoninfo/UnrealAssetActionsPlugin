@@ -145,14 +145,13 @@ private:
 	 * @note: The size of this array is dependent on the number of assets in the selected folder
 	 * and subfolders. Array is important for select and deselect fns.
 	 */
-	TArray<TSharedRef<SCheckBox>> CheckBoxesArray;
+	TMap<TSharedPtr<FAssetData>, TSharedRef<SCheckBox>> CheckBoxesMap;
 
-	/** 
-	 * Array to hold all assets that are checked in the asset list view.
-	 * 
-	 * @note: Array is important for delete selected fn.
-	 */
-	TArray<TSharedPtr<FAssetData>> CheckedAssetsToDelete;
+	/** Array to hold all assets that are checked in the asset list view. */
+	TArray<TSharedPtr<FAssetData>> CheckedAssets;
+
+	/** Array to hold all assets that are not checked in the asset list view. */
+	TArray<TSharedPtr<FAssetData>> UncheckedAssets;
 
 	/** 
 	 * Generate a row in the list view for every asset found in the selected folders
@@ -240,6 +239,9 @@ private:
 
 	/** Helper function to remove asset data from arrays when deleted */
 	void EnsureAssetDeletionFromLists(const TSharedPtr<FAssetData>& AssetDataToDelete);
+
+	/** Helper function to empty all data arrays associated with checkboxes */
+	void ClearCheckedStates();
 
 	/** Helper function to get UE Embossed font style */
 	FSlateFontInfo GetEmbossedFont() const { return FCoreStyle::Get().GetFontStyle(FName("EmbossedText")); }
