@@ -50,14 +50,14 @@ TSharedRef<FExtender> FAssetActionsManagerModule::CustomCBMenuExtender(const TAr
 	if (SelectedPaths.Num() > 0)
 	{
 		MenuExtender->AddMenuExtension(
-			FName("Delete"), // Existing menu option 
+			FName("Delete"), // Existing menu option (extension points option in editor prefs)
 			EExtensionHook::After, // Position of new entry relative to existing menu option
 			TSharedPtr<FUICommandList>(),
-			FMenuExtensionDelegate::CreateRaw(this, &FAssetActionsManagerModule::AddCBMenuEntry)); // Second delegate bind to member fn
+				FMenuExtensionDelegate::CreateRaw(this, &FAssetActionsManagerModule::AddCBMenuEntry)); // Second delegate bind to member fn
 
-		// Selected Paths is passed in through bind fn which is based on user selection of folder
-		// Set an array to the path that is obtained from this menu action
-		SelectedFolderPaths = SelectedPaths;
+				// Selected Paths is passed in through bind fn which is based on user selection of folder
+				// Set an array to the path that is obtained from this menu action
+				SelectedFolderPaths = SelectedPaths;
 	}
 
 	return MenuExtender;
@@ -72,7 +72,7 @@ void FAssetActionsManagerModule::AddCBMenuEntry(FMenuBuilder& MenuBuilder)
 	MenuBuilder.AddMenuEntry
 	(
 		FText::FromString("Quick Asset Actions"), // Name
-		FText::FromString("Search assets under a selected folder to perform actions on"), // ToolTip
+		FText::FromString("Spawn a list of assets under a selected folder to filter and perform bulk actions on"), // ToolTip
 		FSlateIcon(),
 		FExecuteAction::CreateRaw(this, &FAssetActionsManagerModule::OnAssetActionsMenuEntryClicked) // Third delegate bind to member fn
 	);
@@ -143,7 +143,17 @@ void FAssetActionsManagerModule::RegisterAssetActionsTab()
 	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(FName("AssetActions"),
 		FOnSpawnTab::CreateRaw(this, &FAssetActionsManagerModule::OnSpawnAssetActionsTab))
 		.SetDisplayName(FText::FromString(TEXT("Quick Asset Actions")))
-		.SetAutoGenerateMenuEntry(false);
+		.SetAutoGenerateMenuEntry(false)
+		.SetReuseTabMethod(FOnFindTabToReuse::CreateLambda([&](const FTabId&)
+			{
+				if (AssetActionsTab.IsValid())
+				{
+					AssetActionsTab->RequestCloseTab();
+					AssetActionsTab = nullptr;
+				}
+
+				return AssetActionsTab;
+			}));
 }
 
 TSharedRef<SDockTab> FAssetActionsManagerModule::OnSpawnAssetActionsTab(const FSpawnTabArgs& AssetActionsTabArgs)
@@ -151,13 +161,15 @@ TSharedRef<SDockTab> FAssetActionsManagerModule::OnSpawnAssetActionsTab(const FS
 	Construct an SDockTab and assign the SLATE_ARGUMENT in the widget to the asset data found in the selected folder
 */
 {
-	return
+	AssetActionsTab =
 		SNew(SDockTab).TabRole(ETabRole::NomadTab)
 		[
 			SNew(SAssetActionsTab)
 				.AllAssetsDataFromManager(GetAllAssetDataUnderSelectedFolder()) // matches the SLATE_ARGUMENT in widget file
 				.SelectedFoldersPaths(SelectedFolderPaths)
 		];
+
+	return AssetActionsTab.ToSharedRef();
 }
 
 TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::GetAllAssetDataUnderSelectedFolder()

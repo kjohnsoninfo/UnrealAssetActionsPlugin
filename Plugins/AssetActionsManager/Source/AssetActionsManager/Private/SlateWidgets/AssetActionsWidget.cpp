@@ -380,11 +380,11 @@ TSharedRef<SListView<TSharedPtr<FAssetData>>> SAssetActionsTab::ConstructAssetLi
 			.SortMode(this, &SAssetActionsTab::GetSortModeForColumn, AssetActionsColumns::Checkbox)
 			.OnSort(this, &SAssetActionsTab::OnSortModeChanged)
 			[
-				ConstructTextForHeaderRow(TEXT("\u2713"))
+				ConstructCheckBoxForHeaderRow()
 			]
 
 			+ SHeaderRow::Column(AssetActionsColumns::Class)
-			.FillWidth(1.9f)
+			.FillWidth(1.8f)
 			.VAlignHeader(EVerticalAlignment::VAlign_Center)
 			.HAlignHeader(EHorizontalAlignment::HAlign_Center)
 			.SortMode(this, &SAssetActionsTab::GetSortModeForColumn, AssetActionsColumns::Class)
@@ -445,10 +445,57 @@ TSharedRef<STextBlock> SAssetActionsTab::ConstructTextForHeaderRow(const FString
 	// Fixes formatting for path column
 	if (ColumnName == TEXT("Asset Parent Folder"))
 	{
-		ConstructedTextBlock->SetMargin(FMargin(25.f, 0.f, 0.f, 0.f));
+		ConstructedTextBlock->SetMargin(FMargin(30.f, 0.f, 0.f, 0.f));
 	}
 
 	return ConstructedTextBlock;
+}
+
+TSharedRef<SCheckBox> SAssetActionsTab::ConstructCheckBoxForHeaderRow()
+{
+	HeaderCheckBox =
+		SNew(SCheckBox)
+		.Type(ESlateCheckBoxType::CheckBox)
+		.OnCheckStateChanged(this, &SAssetActionsTab::OnHeaderCheckBoxStateChanged);
+
+	return HeaderCheckBox.ToSharedRef();
+}
+
+void SAssetActionsTab::OnHeaderCheckBoxStateChanged(ECheckBoxState CheckBoxState)
+{
+	switch (CheckBoxState)
+	{
+	case ECheckBoxState::Unchecked:
+
+		if (CheckBoxesMap.Num() == 0) return;
+
+		for (auto& CheckBox : CheckBoxesMap)
+		{
+			if (CheckBox.Value->IsChecked())
+			{
+				CheckBox.Value->ToggleCheckedState();
+			}
+		}
+
+		break;
+	case ECheckBoxState::Checked:
+
+		if (CheckBoxesMap.Num() == 0) return;
+
+		for (auto& CheckBox : CheckBoxesMap)
+		{
+			if (!CheckBox.Value->IsChecked())
+			{
+				CheckBox.Value->ToggleCheckedState();
+			}
+		}
+
+		break;
+	case ECheckBoxState::Undetermined:
+		break;
+	default:
+		break;
+	}
 }
 
 void SAssetActionsTab::DefaultSorting()
@@ -649,9 +696,9 @@ TSharedRef<ITableRow> SAssetActionsTab::OnGenerateRowForListView(TSharedPtr<FAss
 
 				// First slot for checkbox
 				+ SHorizontalBox::Slot()
-				.HAlign(HAlign_Center)
+				.HAlign(HAlign_Right)
 				.VAlign(VAlign_Center)
-				.FillWidth(.15f)
+				.FillWidth(.14f)
 				[
 					ConstructCheckBoxes(AssetDataToDisplay)
 				]

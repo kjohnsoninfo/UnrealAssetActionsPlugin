@@ -93,6 +93,8 @@ private:
 	 */
 	TSharedPtr<SListView<TSharedPtr<FAssetData>>> ConstructedAssetListView;
 
+	TSharedPtr<SCheckBox> HeaderCheckBox;
+
 	/** Currently selected column to sort with; default = Name */
 	FName SortByColumn;
 
@@ -104,6 +106,12 @@ private:
 
 	/** Construct header row label for each column */
 	TSharedRef<STextBlock> ConstructTextForHeaderRow(const FString& ColumnName);
+	
+	/** Construct a checkbox for header row that toggles between select all and deselect all */
+	TSharedRef<SCheckBox> ConstructCheckBoxForHeaderRow();
+
+	/** Delegate function that keeps track of checked and unchecked state of each row */
+	void OnHeaderCheckBoxStateChanged(ECheckBoxState CheckBoxState);
 
 	/** 
 	 * Delegate function to get sort mode for each column
@@ -162,7 +170,7 @@ private:
 	 */
 	TSharedRef<ITableRow> OnGenerateRowForListView(TSharedPtr<FAssetData> AssetDataToDisplay, 
 		const TSharedRef<STableViewBase>& OwnerTable);
-	
+
 	/** Construct a checkbox for each row in the list view */
 	TSharedRef<SCheckBox> ConstructCheckBoxes(const TSharedPtr<FAssetData>& AssetDataToDisplay);
 

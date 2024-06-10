@@ -75,6 +75,8 @@ private:
 
 #pragma region AssetActionsTab
 
+	TSharedPtr<SDockTab> AssetActionsTab;
+
 	/** Register newly created tab  */
 	void RegisterAssetActionsTab();
 
