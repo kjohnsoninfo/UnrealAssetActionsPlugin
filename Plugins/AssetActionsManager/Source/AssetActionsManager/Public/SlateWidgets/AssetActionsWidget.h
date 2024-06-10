@@ -104,6 +104,8 @@ private:
 	/** Construct SListView to display all assets in selected folder */
 	TSharedRef<SListView<TSharedPtr<FAssetData>>> ConstructAssetListView();
 
+	void OnRowDoubleClick(TSharedPtr<FAssetData> ClickedAssetData);
+
 	/** Construct header row label for each column */
 	TSharedRef<STextBlock> ConstructTextForHeaderRow(const FString& ColumnName);
 	

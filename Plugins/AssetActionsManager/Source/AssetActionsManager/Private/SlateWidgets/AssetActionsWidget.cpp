@@ -369,6 +369,7 @@ TSharedRef<SListView<TSharedPtr<FAssetData>>> SAssetActionsTab::ConstructAssetLi
 		.ItemHeight(24.f) // height of each row
 		.ListItemsSource(&DisplayedAssetsData) // pointer to array of source items
 		.OnGenerateRow(this, &SAssetActionsTab::OnGenerateRowForListView) // create row for every asset found
+		.OnMouseButtonDoubleClick(this, &SAssetActionsTab::OnRowDoubleClick)
 		.HeaderRow
 		(
 			SNew(SHeaderRow)
@@ -431,6 +432,14 @@ TSharedRef<SListView<TSharedPtr<FAssetData>>> SAssetActionsTab::ConstructAssetLi
 	DefaultSorting();
 
 	return ConstructedAssetListView.ToSharedRef(); // convert to ref after construction
+}
+
+void SAssetActionsTab::OnRowDoubleClick(TSharedPtr<FAssetData> ClickedAssetData)
+{
+	// Load module
+	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
+
+	AssetActionsManager.SyncCBToClickedAsset(ClickedAssetData->ObjectPath.ToString());
 }
 
 TSharedRef<STextBlock> SAssetActionsTab::ConstructTextForHeaderRow(const FString& ColumnName)
@@ -788,7 +797,7 @@ TSharedRef<SCheckBox> SAssetActionsTab::ConstructCheckBoxes(const TSharedPtr<FAs
 
 void SAssetActionsTab::OnCheckBoxStateChanged(ECheckBoxState CheckBoxState, TSharedPtr<FAssetData> ClickedAssetData)
 {
-	// Add or remove assets from delete array based on checkbox state
+	// Add or remove assets from delete array and set header state based on row checkbox state
 	switch (CheckBoxState)
 	{
 	case ECheckBoxState::Unchecked:
@@ -800,6 +809,18 @@ void SAssetActionsTab::OnCheckBoxStateChanged(ECheckBoxState CheckBoxState, TSha
 			CheckedAssets.Remove(ClickedAssetData);
 		}
 
+		// if row checkboxes have both states, set headercheckbox to undetermined
+		if (UncheckedAssets.Num() > 0 && CheckedAssets.Num() > 0)
+		{
+			HeaderCheckBox->SetIsChecked(ECheckBoxState::Undetermined);
+		}
+
+		// if row checkboxes are all unchecked, set headercheckbox to unchecked
+		if (CheckedAssets.Num() == 0)
+		{
+			HeaderCheckBox->SetIsChecked(ECheckBoxState::Unchecked);
+		}
+
 		break;
 	case ECheckBoxState::Checked:
 
@@ -808,6 +829,18 @@ void SAssetActionsTab::OnCheckBoxStateChanged(ECheckBoxState CheckBoxState, TSha
 		if (UncheckedAssets.Contains(ClickedAssetData))
 		{
 			UncheckedAssets.Remove(ClickedAssetData);
+		}
+
+		// if row checkboxes have both states, set headercheckbox to undetermined
+		if (UncheckedAssets.Num() > 0 && CheckedAssets.Num() > 0)
+		{
+			HeaderCheckBox->SetIsChecked(ECheckBoxState::Undetermined);
+		}
+
+		// if row checkboxes are all checked, set headercheckbox to checked
+		if (UncheckedAssets.Num() == 0)
+		{
+			HeaderCheckBox->SetIsChecked(ECheckBoxState::Checked);
 		}
 
 		break;

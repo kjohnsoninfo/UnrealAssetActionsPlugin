@@ -139,13 +139,17 @@ void FAssetActionsManagerModule::FixUpRedirectors()
 #pragma region AssetActionsTab
 
 void FAssetActionsManagerModule::RegisterAssetActionsTab()
+/*
+	Register the spawned tab, bind the spawn behavior, and set the tab properties
+*/
 {
 	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(FName("AssetActions"),
 		FOnSpawnTab::CreateRaw(this, &FAssetActionsManagerModule::OnSpawnAssetActionsTab))
 		.SetDisplayName(FText::FromString(TEXT("Quick Asset Actions")))
 		.SetAutoGenerateMenuEntry(false)
-		.SetReuseTabMethod(FOnFindTabToReuse::CreateLambda([&](const FTabId&)
+		.SetReuseTabMethod(FOnFindTabToReuse::CreateLambda([&](const FTabId&) // set behavior if tab already exists
 			{
+				// tab exists, close it and set it to nullptr so that it reopens
 				if (AssetActionsTab.IsValid())
 				{
 					AssetActionsTab->RequestCloseTab();
@@ -235,20 +239,6 @@ int32 FAssetActionsManagerModule::GetAssetReferencersCount(const TSharedPtr<FAss
 	return AssetReferencers.Num();
 }
 
-bool FAssetActionsManagerModule::DeleteAssetsInList(const TArray<FAssetData>& AssetsToDelete)
-/*
-	Return true if assets were deleted successfully by DeleteAssets fn from ObjectTools
-	Else return false
-*/
-{
-	if (ObjectTools::DeleteAssets(AssetsToDelete) > 0)
-	{
-		return true;
-	}
-
-	return false;
-}
-
 TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::FilterForUnusedAssetData(const TArray<TSharedPtr<FAssetData>>& AssetDataToFilter)
 /*
 	List unsused assets by checking count of asset referencers for all assets under selected folder 
@@ -299,6 +289,29 @@ TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::FilterForDuplicateNam
 	}
 
 	return DuplicatedAssetData;
+}
+
+bool FAssetActionsManagerModule::DeleteAssetsInList(const TArray<FAssetData>& AssetsToDelete)
+/*
+	Return true if assets were deleted successfully by DeleteAssets fn from ObjectTools
+	Else return false
+*/
+{
+	if (ObjectTools::DeleteAssets(AssetsToDelete) > 0)
+	{
+		return true;
+	}
+
+	return false;
+}
+
+void FAssetActionsManagerModule::SyncCBToClickedAsset(const FString& ClickedAssetPath)
+{
+	// Convert path to array since that is what SyncBrowserToObjects expects
+	TArray<FString> AssetPathToSync;
+	AssetPathToSync.Add(ClickedAssetPath);
+
+	UEditorAssetLibrary::SyncBrowserToObjects(AssetPathToSync);
 }
 
 #pragma endregion

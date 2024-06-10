@@ -21,15 +21,6 @@ public:
 	 */
 	int32 GetAssetReferencersCount(const TSharedPtr<FAssetData>& AssetData);
 
-	/** Delete assets marked for deletion by the user widget 
-	 * 
-	 * @return bool: returns true when function successfully deletes an asset, else returns false
-	 * 
-	 * @note: This is important because the widget calls different functions 
-	 *		 based on whether or not assets were deleted.
-	 */
-	bool DeleteAssetsInList(const TArray<FAssetData>& AssetsToDelete);
-
 	/** Get unused assets by filtering all assets
 	 *
 	 * @param AssetDataToFilter: array of assets to filter on
@@ -41,6 +32,17 @@ public:
 	 * @param AssetDataToFilter: array of assets to filter on
 	 */
 	TArray<TSharedPtr<FAssetData>> FilterForDuplicateNameData(const TArray<TSharedPtr<FAssetData>>& AssetDataToFilter);
+
+	/** Delete assets marked for deletion by the user widget
+	 *
+	 * @return bool: returns true when function successfully deletes an asset, else returns false
+	 *
+	 * @note: This is important because the widget calls different functions
+	 *		 based on whether or not assets were deleted.
+	 */
+	bool DeleteAssetsInList(const TArray<FAssetData>& AssetsToDelete);
+
+	void SyncCBToClickedAsset(const FString& ClickedAssetPath);
 
 #pragma endregion
 
@@ -75,6 +77,7 @@ private:
 
 #pragma region AssetActionsTab
 
+	/** Pointer to created tab  */
 	TSharedPtr<SDockTab> AssetActionsTab;
 
 	/** Register newly created tab  */
