@@ -248,7 +248,7 @@ private:
 	void ClearCheckedStates();
 
 	/** Helper function to load asset action manager module */
-	FAssetActionsManagerModule& LoadManagerModule() const 
+	class FAssetActionsManagerModule& LoadManagerModule() const 
 	{ return FModuleManager::LoadModuleChecked<FAssetActionsManagerModule>(TEXT("AssetActionsManager")); }
 
 	/** Helper function to get UE Embossed font style */

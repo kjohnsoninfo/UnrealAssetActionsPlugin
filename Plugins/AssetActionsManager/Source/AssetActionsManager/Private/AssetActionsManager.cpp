@@ -81,7 +81,7 @@ void FAssetActionsManagerModule::AddCBMenuEntry(FMenuBuilder& MenuBuilder)
 void FAssetActionsManagerModule::OnAssetActionsMenuEntryClicked()
 {
 	// Fix up redirectors if needed
-	// FixUpRedirectors();
+	FixUpRedirectors();
 
 	// Spawn tab 
 	FGlobalTabmanager::Get()->TryInvokeTab(FName("AssetActions"));

@@ -459,8 +459,13 @@ void SAssetActionsTab::DefaultSorting()
 	SortByColumn = AssetActionsColumns::Name;
 	SortMode = EColumnSortMode::Ascending;
 
-	DisplayedAssetsData.Sort([](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
-		{ return A->AssetName.Compare(B->AssetName) < 0; });
+	// A->Z primary sort = name; if equivalent, secondary sort = packagepath
+	DisplayedAssetsData.Sort(
+		[](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
+		{
+			return (A->AssetName.Compare(B->AssetName) < 0 ||
+				((A->AssetName == B->AssetName) && (A->PackagePath.Compare(B->PackagePath) < 0)));
+		});
 }
 
 EColumnSortMode::Type SAssetActionsTab::GetSortModeForColumn(const FName ColumnId) const
@@ -530,13 +535,23 @@ void SAssetActionsTab::UpdateSorting()
 	{
 		if (SortMode == EColumnSortMode::Ascending) 
 		{
-			DisplayedAssetsData.Sort([](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
-				{ return A->AssetName.Compare(B->AssetName) < 0; }); // A->Z
+			// A->Z primary sort = name; if equivalent, secondary sort = packagepath
+			DisplayedAssetsData.Sort(
+				[](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
+				{ 
+					return (A->AssetName.Compare(B->AssetName) < 0 ||
+						((A->AssetName == B->AssetName) && (A->PackagePath.Compare(B->PackagePath) < 0)));
+				}); 
 		}
 		else 
-		{
-			DisplayedAssetsData.Sort([](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
-				{ return B->AssetName.Compare(A->AssetName) < 0; }); // Z->A
+		{	
+			// Z->A primary sort = name; if equivalent, secondary sort = packagepath
+			DisplayedAssetsData.Sort(
+				[](const TSharedPtr<FAssetData>& A, const TSharedPtr<FAssetData>& B)
+				{
+					return (B->AssetName.Compare(A->AssetName) < 0 ||
+						((B->AssetName == A->AssetName) && (B->PackagePath.Compare(A->PackagePath) < 0)));
+				});
 		}
 	}
 
