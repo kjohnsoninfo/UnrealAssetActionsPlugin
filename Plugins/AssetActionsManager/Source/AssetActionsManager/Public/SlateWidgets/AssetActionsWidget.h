@@ -30,7 +30,11 @@ class SAssetActionsTab : public SCompoundWidget
 		 */
 		SLATE_ARGUMENT(TArray<TSharedPtr<FAssetData>>, AllAssetsDataFromManager) 
 
+		/** Argument for the folder path that user selected when spawning tab */
 		SLATE_ARGUMENT(TArray<FString>, SelectedFoldersPaths)
+
+		/** Argument for new name entered when RenameAssetDialog spawns */
+		SLATE_ARGUMENT(FString, NewAssetName)
 
 	SLATE_END_ARGS()
 
@@ -189,15 +193,17 @@ private:
 	/** Construct text for each row to display asset properties such as class, name, and path */
 	TSharedRef<STextBlock> ConstructTextForRow(const FString& RowText);
 
-	/** Construct a delete button for each row in the list view */
-	TSharedRef<SButton> ConstructDeleteButtonForRow(const TSharedPtr<FAssetData>& AssetDataToDisplay);
+	/** Construct a rename button for each row in the list view */
+	TSharedRef<SButton> ConstructRenameButtonForRow(const TSharedPtr<FAssetData>& AssetDataToDisplay);
 
 	/** 
 	 * Delegate function that calls the manager delete fn when the delete button in a row is clicked
 	 * 
 	 * @note: This function is for deleting a single asset.
 	 */
-	FReply OnDeleteButtonClicked(TSharedPtr<FAssetData> ClickedAssetData);
+	FReply OnRenameButtonClicked(TSharedPtr<FAssetData> ClickedAssetData);
+
+	void RenameAsset(const FString& NewName, const TSharedPtr<FAssetData>& AssetToRename);
 
 #pragma endregion
 
@@ -215,7 +221,10 @@ private:
 	FReply OnDeleteSelectedButtonClicked();
 
 	/** Delegate function that checks state of all checkboxes and toggles to checked */
-	FReply OnSelectAllButtonClicked();
+	FReply OnDuplicateSelectedButtonClicked(int32 NumOfDuplicates);
+
+	/** Construct a modal dialog to get user input for number of duplicates */
+	int32 ConstructDuplicateAssetsDialogBox();
 
 	/** Delegate function that checks state of all checkboxes and toggles to unchecked */
 	FReply OnDeselectAllButtonClicked();

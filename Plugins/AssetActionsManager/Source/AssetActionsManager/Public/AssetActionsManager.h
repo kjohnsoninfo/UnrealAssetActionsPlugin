@@ -52,7 +52,7 @@ public:
 	bool AddPrefixesToAssetsInList(const TArray<FAssetData>& AssetsToAddPrefixes);
 
 	/** Rename assets selected in the user widget */
-	bool RenameAssetInList(const TArray<FAssetData>& AssetsToRename);
+	bool RenameAssetInList(const FString& NewName, const TSharedPtr<FAssetData>& AssetToRename);
 
 	bool DuplicateAssetsInList(const TArray<FAssetData>& AssetsToDelete);
 

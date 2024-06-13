@@ -73,7 +73,7 @@ void FAssetActionsManagerModule::AddCBMenuEntry(FMenuBuilder& MenuBuilder)
 	(
 		FText::FromString("Quick Asset Actions"), // Name
 		FText::FromString("Spawn a list of assets under a selected folder to filter and perform bulk actions on"), // ToolTip
-		FSlateIcon(),
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Edit"),
 		FExecuteAction::CreateRaw(this, &FAssetActionsManagerModule::OnAssetActionsMenuEntryClicked) // Third delegate bind to member fn
 	);
 }
@@ -312,6 +312,22 @@ void FAssetActionsManagerModule::SyncCBToClickedAsset(const FString& ClickedAsse
 	AssetPathToSync.Add(ClickedAssetPath);
 
 	UEditorAssetLibrary::SyncBrowserToObjects(AssetPathToSync);
+}
+
+bool FAssetActionsManagerModule::RenameAssetInList(const FString& NewName, const TSharedPtr<FAssetData>& AssetToRename)
+{
+	const FString OldAssetPath = AssetToRename->GetObjectPathString();
+	const FString NewAssetPath = FPaths::Combine(AssetToRename->PackagePath.ToString(), NewName);
+
+	if (UEditorAssetLibrary::RenameAsset(OldAssetPath, NewAssetPath))
+	{
+		UEditorAssetLibrary::SaveAsset(NewAssetPath, false);
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
 
 #pragma endregion

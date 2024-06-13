@@ -7,10 +7,11 @@
 #include "EditorAssetLibrary.h"
 #include "Dialogs/Dialogs.h"
 #include "Widgets/Input/SNumericEntryBox.h"
+#include "RenameAssetDialog.h"
 
 #define LOCTEXT_NAMESPACE "SAssetActionsTab"
 #define DeleteSelected TEXT("Delete Selected")
-#define SelectAll TEXT("Select All")
+#define DuplicateSelected TEXT("Duplicate Selected")
 #define DeselectAll TEXT("Deselect All")
 #define ListAll TEXT("List All Assets")
 #define ListUnused TEXT("List Unused Assets")
@@ -163,7 +164,7 @@ void SAssetActionsTab::Construct(const FArguments& InArgs)
 				.FillWidth(10.f)
 				.Padding(5.f)
 				[
-					ConstructButtonForSlot(SelectAll)
+					ConstructButtonForSlot(DuplicateSelected)
 				]
 				// Deselect All
 				+ SHorizontalBox::Slot()
@@ -742,14 +743,14 @@ TSharedRef<ITableRow> SAssetActionsTab::OnGenerateRowForListView(TSharedPtr<FAss
 					ConstructTextForRow(AssetRefCount)
 				]
 
-				// Sixth slot for single deletion
+				// Sixth slot for rename
 				+ SHorizontalBox::Slot()
 				.HAlign(HAlign_Right)
 				.VAlign(VAlign_Fill)
 				.FillWidth(.7f)
 				.Padding(2.f, 2.f, 10.f, 2.f)
 				[
-					ConstructDeleteButtonForRow(AssetDataToDisplay)
+					ConstructRenameButtonForRow(AssetDataToDisplay)
 				]
 
 		];
@@ -906,44 +907,65 @@ TSharedRef<STextBlock> SAssetActionsTab::ConstructTextForRow(const FString& RowT
 	return ConstructedTextBlock;
 }
 
-TSharedRef<SButton> SAssetActionsTab::ConstructDeleteButtonForRow(const TSharedPtr<FAssetData>& AssetDataToDisplay)
+TSharedRef<SButton> SAssetActionsTab::ConstructRenameButtonForRow(const TSharedPtr<FAssetData>& AssetDataToDisplay)
 /*
 	Construct delete button that deletes a single asset for each row in the list view
 */
 {
-	TSharedRef<SButton> ConstructedDeleteButton =
+	TSharedRef<SButton> ConstructedRenameButton =
 		SNew(SButton)
-		.OnClicked(this, &SAssetActionsTab::OnDeleteButtonClicked, AssetDataToDisplay);
+		.OnClicked(this, &SAssetActionsTab::OnRenameButtonClicked, AssetDataToDisplay);
 
-	ConstructedDeleteButton->SetContent(ConstructTextForRow(TEXT("Delete")));
+	ConstructedRenameButton->SetContent(ConstructTextForRow(TEXT("Rename")));
 
-	return ConstructedDeleteButton;
+	return ConstructedRenameButton;
 }
 
-FReply SAssetActionsTab::OnDeleteButtonClicked(TSharedPtr<FAssetData> ClickedAssetData) 
+FReply SAssetActionsTab::OnRenameButtonClicked(TSharedPtr<FAssetData> ClickedAssetData)
 /*
 	Delete a single asset by passing in AssetDataToDisplay for the clicked row
 */
 {
-	// Add single asset to array since ObjectTools::Delete expects an array
-	TArray<FAssetData> AssetToDelete;
-	AssetToDelete.Add(*ClickedAssetData.Get()); // deref from Ptr
+	TSharedRef<SWindow> RenameAssetWindow =
+		SNew(SWindow)
+		.Title(LOCTEXT("RenameAssetWindowTitle", "Rename Asset"))
+		.SizingRule(ESizingRule::Autosized)
+		.SupportsMaximize(false)
+		.SupportsMinimize(false);
 
-	// Load manager module
-	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
+	TSharedRef<SRenameAssetDialog> RenameAssetDialog =
+		SNew(SRenameAssetDialog)
+		.AssetData(ClickedAssetData);
 
-	// Call delete fn from manager module passing in the clicked data
-	bool bAssetDeleted = AssetActionsManager.DeleteAssetsInList(AssetToDelete);
+	RenameAssetWindow->SetContent(SNew(SBox)
+		.MinDesiredWidth(320.0f)
+		[
+			RenameAssetDialog
+		]);
 
-	// Remove from list view if asset was deleted
-	if (bAssetDeleted)
-	{
-		EnsureAssetDeletionFromLists(ClickedAssetData);
-	
-		RefreshWidget();
-	}
+	TSharedPtr<SWindow> CurrentWindow = FSlateApplication::Get().FindWidgetWindow(AsShared());
+
+	FSlateApplication::Get().AddModalWindow(RenameAssetWindow, CurrentWindow);
+
+	FString NewName = RenameAssetDialog->NewName;
+	RenameAsset(NewName, ClickedAssetData);
 
 	return FReply::Handled();
+}
+
+void SAssetActionsTab::RenameAsset(const FString& NewName, const TSharedPtr<FAssetData>& AssetToRename)
+{
+	// Load module
+	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
+
+	if (NewName.IsEmpty()) { return; }
+
+	bool bAssetRenamed = AssetActionsManager.RenameAssetInList(NewName, AssetToRename);
+
+	if (bAssetRenamed)
+	{
+		RefreshWidget();
+	}
 }
 
 #pragma endregion
@@ -995,9 +1017,9 @@ void SAssetActionsTab::AssignButtonClickFns(const FString& ButtonName)
 	{
 		OnDeleteSelectedButtonClicked();
 	}
-	else if (ButtonName == SelectAll)
+	else if (ButtonName == DuplicateSelected)
 	{
-		OnSelectAllButtonClicked();
+		OnDuplicateSelectedButtonClicked(0);
 	}
 	else if (ButtonName == DeselectAll)
 	{
@@ -1044,12 +1066,37 @@ FReply SAssetActionsTab::OnDeleteSelectedButtonClicked()
 	return FReply::Handled();
 }
 
-FReply SAssetActionsTab::OnSelectAllButtonClicked()
+FReply SAssetActionsTab::OnDuplicateSelectedButtonClicked(int32 NumOfDuplicates)
 /*
 	Check state of checkboxes in CheckBoxesArray and toggle to checked if not already checked
 */
 {
 	return FReply::Handled();
+}
+
+int32 SAssetActionsTab::ConstructDuplicateAssetsDialogBox()
+{
+	//int32 NumOfDuplicates = 0;
+
+	//TSharedRef<SNumericEntryBox<int32>> ConstructedNumEntry =
+	//	SNew(SNumericEntryBox<int32>)
+	//	.AllowSpin(true)
+	//	.Font(SharedTextFont)
+	//	.MinValue(1)
+	//	.MaxValue(25)
+	//	.MinSliderValue(1)
+	//	.MaxSliderValue(25)
+	//	.Value(1)
+	//	.Value_Lambda([&] { return TOptional<int32>(NumOfDuplicates); })
+	//	.OnValueChanged_Lambda([&](int32 InValue) { NumOfDuplicates = InValue; })
+	//	.OnValueCommitted_Lambda([&](int32 InValue, ETextCommit::Type CommitInfo) { NumOfDuplicates = InValue; });
+
+	//SGenericDialogWidget::FArguments DialogArgs;
+	//
+	//SGenericDialogWidget::OpenDialog(FText::FromString(TEXT("Duplicate Assets")),
+	//	ConstructedNumEntry, DialogArgs, false);
+
+	return 0;
 }
 
 FReply SAssetActionsTab::OnDeselectAllButtonClicked()
