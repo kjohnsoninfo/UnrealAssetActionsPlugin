@@ -4,6 +4,7 @@
 
 #include "Widgets/SCompoundWidget.h"
 #include "Widgets/Text/SRichTextBlock.h"
+#include "Widgets/Input/SNumericEntryBox.h"
 
 namespace AssetActionsColumns
 {
@@ -149,13 +150,19 @@ private:
 	 */
 	TArray<TSharedPtr<FAssetData>> DisplayedAssetsData;
 
+	/** Array to hold unused assets filtered by manager */
+	TArray<TSharedPtr<FAssetData>> UnusedAssetsData;
+
+	/** Array to hold unused assets filtered by manager */
+	TArray<TSharedPtr<FAssetData>> DuplicatedNameAssetsData;
+
 	/** 
 	 * Array to hold all constructed CheckBoxes when widget is constructed
 	 * 
 	 * @note: The size of this array is dependent on the number of assets in the selected folder
 	 * and subfolders. Array is important for select and deselect fns.
 	 */
-	TMap<TSharedPtr<FAssetData>, TSharedRef<SCheckBox>> CheckBoxesMap;
+	TArray<TSharedRef<SCheckBox>> CheckBoxesArray;
 
 	/** Array to hold all assets that are checked in the asset list view. */
 	TArray<TSharedPtr<FAssetData>> CheckedAssets;
@@ -249,10 +256,13 @@ private:
 	void RefreshWidget();
 
 	/** Helper function to update changes in the list view such as moving folders or adding assets  */
-	void CheckForAssetChanges();
+	void FilterAssetData();
 
 	/** Helper function to remove asset data from arrays when deleted */
 	void EnsureAssetDeletionFromLists(const TSharedPtr<FAssetData>& AssetDataToDelete);
+
+	/** Helper function to get map of asset names and paths */
+	TMultiMap<FString, FString> GetCheckBoxAssetMap(const TArray<TSharedPtr<FAssetData>> CheckBoxStateArray);
 
 	/** Helper function to empty all data arrays associated with checkboxes */
 	void ClearCheckedStates();

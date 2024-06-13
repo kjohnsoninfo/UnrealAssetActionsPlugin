@@ -14,6 +14,9 @@ public:
 	virtual void ShutdownModule() override;
 
 #pragma region ProcessDataForWidget
+
+	/** Return an array of Asset Data under the folder that the user opened the right-click menu on */
+	TArray<TSharedPtr<FAssetData>> GetAllAssetDataUnderSelectedFolder();
 	
 	/** Get count of all asset referencers
 	 *
@@ -42,10 +45,20 @@ public:
 	 */
 	bool DeleteAssetsInList(const TArray<FAssetData>& AssetsToDelete);
 
+	/** Move content browser location to asset path passed in by widget */
 	void SyncCBToClickedAsset(const FString& ClickedAssetPath);
 
-#pragma endregion
+	/** Add prefixes to assets selected in the user widget */
+	bool AddPrefixesToAssetsInList(const TArray<FAssetData>& AssetsToAddPrefixes);
 
+	/** Rename assets selected in the user widget */
+	bool RenameAssetInList(const TArray<FAssetData>& AssetsToRename);
+
+	bool DuplicateAssetsInList(const TArray<FAssetData>& AssetsToDelete);
+
+	/** Fix up redirectors to ensure asset file paths are accurate */
+	void FixUpRedirectors();
+#pragma endregion
 
 private:
 #pragma region ExtendContentBrowserMenu
@@ -71,8 +84,6 @@ private:
 	/** Spawn tab when the Advanced Deletion menu entry is clicked */
 	void OnAssetActionsMenuEntryClicked();
 
-	/** Fix up redirectors when tab is spawned to ensure asset file paths are accurate */
-	void FixUpRedirectors();
 #pragma endregion
 
 #pragma region AssetActionsTab
@@ -85,9 +96,6 @@ private:
 
 	/** Create a new nomad tab */
 	TSharedRef<SDockTab> OnSpawnAssetActionsTab(const FSpawnTabArgs& AssetActionsTabArgs);
-
-	/** Return an array of Asset Data under the folder that the user opened the right-click menu on */
-	TArray<TSharedPtr<FAssetData>> GetAllAssetDataUnderSelectedFolder();
 
 #pragma endregion
 
