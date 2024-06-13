@@ -5,6 +5,8 @@
 #include "DebugHelper.h"
 #include "AssetActionsManager.h"
 #include "EditorAssetLibrary.h"
+#include "Dialogs/Dialogs.h"
+#include "Widgets/Input/SNumericEntryBox.h"
 
 #define LOCTEXT_NAMESPACE "SAssetActionsTab"
 #define DeleteSelected TEXT("Delete Selected")
@@ -173,6 +175,8 @@ void SAssetActionsTab::Construct(const FArguments& InArgs)
 			]
 
 		];
+
+		FilterAssetData();
 }
 
 #pragma region TitleBar
@@ -299,25 +303,15 @@ void SAssetActionsTab::OnFilterSelectionChanged(TSharedPtr<FString> SelectedFilt
 	// Display only unused assets 
 	else if (SelectedFilterText == ListUnused)
 	{
-		// Load Manager
-		FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
-
-		// Filter items
-		DisplayedAssetsData = AssetActionsManager.FilterForUnusedAssetData(AllAssetsDataFromManager);
-
+		DisplayedAssetsData = UnusedAssetsData;
 		RefreshWidget();
 	}
 
 	// Display assets with duplicate names 
 	else if (SelectedFilterText == ListDuplicate)
 	{
-		// Load Manager
-		FAssetActionsManagerModule& AssetActionsManager =
-			FModuleManager::LoadModuleChecked<FAssetActionsManagerModule>(TEXT("AssetActionsManager"));
-
 		// Filter items
-		DisplayedAssetsData = AssetActionsManager.FilterForDuplicateNameData(AllAssetsDataFromManager);
-
+		DisplayedAssetsData = DuplicatedNameAssetsData;
 		RefreshWidget();
 	}
 }
@@ -439,7 +433,7 @@ void SAssetActionsTab::OnRowDoubleClick(TSharedPtr<FAssetData> ClickedAssetData)
 	// Load module
 	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
 
-	AssetActionsManager.SyncCBToClickedAsset(ClickedAssetData->ObjectPath.ToString());
+	AssetActionsManager.SyncCBToClickedAsset(ClickedAssetData->GetObjectPathString());
 }
 
 TSharedRef<STextBlock> SAssetActionsTab::ConstructTextForHeaderRow(const FString& ColumnName)
@@ -476,26 +470,26 @@ void SAssetActionsTab::OnHeaderCheckBoxStateChanged(ECheckBoxState CheckBoxState
 	{
 	case ECheckBoxState::Unchecked:
 
-		if (CheckBoxesMap.Num() == 0) return;
+		if (CheckBoxesArray.Num() == 0) return;
 
-		for (auto& CheckBox : CheckBoxesMap)
+		for (TSharedRef<SCheckBox>& CheckBox : CheckBoxesArray)
 		{
-			if (CheckBox.Value->IsChecked())
+			if (CheckBox->IsChecked())
 			{
-				CheckBox.Value->ToggleCheckedState();
+				CheckBox->ToggleCheckedState();
 			}
 		}
 
 		break;
 	case ECheckBoxState::Checked:
 
-		if (CheckBoxesMap.Num() == 0) return;
+		if (CheckBoxesArray.Num() == 0) return;
 
-		for (auto& CheckBox : CheckBoxesMap)
+		for (TSharedRef<SCheckBox>& CheckBox : CheckBoxesArray)
 		{
-			if (!CheckBox.Value->IsChecked())
+			if (!CheckBox->IsChecked())
 			{
-				CheckBox.Value->ToggleCheckedState();
+				CheckBox->ToggleCheckedState();
 			}
 		}
 
@@ -773,22 +767,26 @@ TSharedRef<SCheckBox> SAssetActionsTab::ConstructCheckBoxes(const TSharedPtr<FAs
 		.Type(ESlateCheckBoxType::CheckBox)
 		.OnCheckStateChanged(this, &SAssetActionsTab::OnCheckBoxStateChanged, AssetDataToDisplay);
 
-	CheckBoxesMap.Add(AssetDataToDisplay, ConstructedCheckBox);
+	CheckBoxesArray.Add(ConstructedCheckBox);
 
-	// set previously checked state
-	if (CheckedAssets.Contains(AssetDataToDisplay))
+	TMultiMap<FString, FString> CheckedAssetMap = GetCheckBoxAssetMap(CheckedAssets);
+	TMultiMap<FString, FString> UncheckedAssetMap = GetCheckBoxAssetMap(UncheckedAssets);
+	FString AssetName = AssetDataToDisplay->AssetName.ToString();
+	FString AssetPath = AssetDataToDisplay->GetObjectPathString();
+
+	if (CheckedAssetMap.FindPair(AssetName, AssetPath) != nullptr)
 	{
-		if (!CheckBoxesMap[AssetDataToDisplay]->IsChecked())
+		if (!ConstructedCheckBox->IsChecked())
 		{
-			CheckBoxesMap[AssetDataToDisplay]->SetIsChecked(ECheckBoxState::Checked);
+			ConstructedCheckBox->SetIsChecked(ECheckBoxState::Checked);
 		}
 	}
 
-	else if (UncheckedAssets.Contains(AssetDataToDisplay))
+	if (UncheckedAssetMap.FindPair(AssetName, AssetPath) != nullptr)
 	{
-		if (CheckBoxesMap[AssetDataToDisplay]->IsChecked())
+		if (ConstructedCheckBox->IsChecked())
 		{
-			CheckBoxesMap[AssetDataToDisplay]->SetIsChecked(ECheckBoxState::Unchecked);
+			ConstructedCheckBox->SetIsChecked(ECheckBoxState::Unchecked);
 		}
 	}
 
@@ -797,16 +795,39 @@ TSharedRef<SCheckBox> SAssetActionsTab::ConstructCheckBoxes(const TSharedPtr<FAs
 
 void SAssetActionsTab::OnCheckBoxStateChanged(ECheckBoxState CheckBoxState, TSharedPtr<FAssetData> ClickedAssetData)
 {
+	TMultiMap<FString, FString> CheckedAssetMap = GetCheckBoxAssetMap(CheckedAssets);
+	TMultiMap<FString, FString> UncheckedAssetMap = GetCheckBoxAssetMap(UncheckedAssets);
+	FString AssetName = ClickedAssetData->AssetName.ToString();
+	FString AssetPath = ClickedAssetData->GetObjectPathString();
+
 	// Add or remove assets from delete array and set header state based on row checkbox state
 	switch (CheckBoxState)
 	{
 	case ECheckBoxState::Unchecked:
 
-		UncheckedAssets.AddUnique(ClickedAssetData);
-
-		if (CheckedAssets.Contains(ClickedAssetData))
+		// if found in checked assets, remove asset
+		if (CheckedAssetMap.FindPair(AssetName, AssetPath) != nullptr) 
 		{
-			CheckedAssets.Remove(ClickedAssetData);
+			TArray<TSharedPtr<FAssetData>> AssetsToRemove;
+
+			for (TSharedPtr<FAssetData> Asset : CheckedAssets)
+			{
+				if (Asset->AssetName == AssetName && Asset->GetObjectPathString() == AssetPath)
+				{
+					AssetsToRemove.AddUnique(Asset);
+				}
+			}
+
+			for (TSharedPtr<FAssetData> AssetToRemove : AssetsToRemove)
+			{
+				CheckedAssets.Remove(AssetToRemove);
+			}
+		}
+
+		// if not found in unchecked assets, add asset
+		if (UncheckedAssetMap.FindPair(AssetName, AssetPath) == nullptr)
+		{
+			UncheckedAssets.AddUnique(ClickedAssetData);
 		}
 
 		// if row checkboxes have both states, set headercheckbox to undetermined
@@ -824,11 +845,29 @@ void SAssetActionsTab::OnCheckBoxStateChanged(ECheckBoxState CheckBoxState, TSha
 		break;
 	case ECheckBoxState::Checked:
 
-		CheckedAssets.AddUnique(ClickedAssetData);
-
-		if (UncheckedAssets.Contains(ClickedAssetData))
+		// if found in unchecked assets, remove asset
+		if (UncheckedAssetMap.FindPair(AssetName, AssetPath) != nullptr)
 		{
-			UncheckedAssets.Remove(ClickedAssetData);
+			TArray<TSharedPtr<FAssetData>> AssetsToRemove;
+
+			for (TSharedPtr<FAssetData> Asset : UncheckedAssets)
+			{
+				if (Asset->AssetName == AssetName && Asset->GetObjectPathString() == AssetPath)
+				{
+					AssetsToRemove.AddUnique(Asset);
+				}
+			}
+
+			for (TSharedPtr<FAssetData> Asset : AssetsToRemove)
+			{
+				UncheckedAssets.Remove(Asset);
+			}
+		}
+
+		// if not found in checked assets, add asset
+		if (CheckedAssetMap.FindPair(AssetName, AssetPath) == nullptr)
+		{
+			CheckedAssets.AddUnique(ClickedAssetData);
 		}
 
 		// if row checkboxes have both states, set headercheckbox to undetermined
@@ -900,7 +939,7 @@ FReply SAssetActionsTab::OnDeleteButtonClicked(TSharedPtr<FAssetData> ClickedAss
 	if (bAssetDeleted)
 	{
 		EnsureAssetDeletionFromLists(ClickedAssetData);
-
+	
 		RefreshWidget();
 	}
 
@@ -1010,16 +1049,6 @@ FReply SAssetActionsTab::OnSelectAllButtonClicked()
 	Check state of checkboxes in CheckBoxesArray and toggle to checked if not already checked
 */
 {
-	if (CheckBoxesMap.Num() == 0) return FReply::Handled();
-
-	for (auto& CheckBox : CheckBoxesMap)
-	{
-		if (!CheckBox.Value->IsChecked())
-		{
-			CheckBox.Value->ToggleCheckedState();
-		}
-	}
-
 	return FReply::Handled();
 }
 
@@ -1028,15 +1057,6 @@ FReply SAssetActionsTab::OnDeselectAllButtonClicked()
 	Check state of checkboxes in CheckBoxesMap and toggle to unchecked if already checked
 */
 {
-	if (CheckBoxesMap.Num() == 0) return FReply::Handled();
-
-	for (auto& CheckBox : CheckBoxesMap)
-	{
-		if (CheckBox.Value->IsChecked())
-		{
-			CheckBox.Value->ToggleCheckedState();
-		}
-	}
 	return FReply::Handled();
 }
 
@@ -1115,10 +1135,29 @@ void SAssetActionsTab::RefreshWidget()
 	Refresh to ensure AssetListView and AssetCount is always up to date
 */
 {
-	// Refresh asset data list if changes identified
-	//CheckForAssetChanges();
+	// Load module
+	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
 
-	FAssetActionsManagerModule& AssetActions = LoadManagerModule();
+	AssetActionsManager.FixUpRedirectors();
+	// Refresh source items to pick up changes
+	AllAssetsDataFromManager = AssetActionsManager.GetAllAssetDataUnderSelectedFolder();
+
+	FilterAssetData();
+	
+	if (ComboBoxDisplayedText->GetText().ToString() == ListAll)
+	{
+		DisplayedAssetsData = AllAssetsDataFromManager;
+	}
+
+	else if (ComboBoxDisplayedText->GetText().ToString() == ListUnused)
+	{
+		DisplayedAssetsData = UnusedAssetsData;
+	}
+
+	else if (ComboBoxDisplayedText->GetText().ToString() == ListDuplicate)
+	{
+		DisplayedAssetsData = DuplicatedNameAssetsData;
+	}
 
 	// Refresh sorting
 	UpdateSorting();
@@ -1139,6 +1178,15 @@ void SAssetActionsTab::RefreshWidget()
 	}
 }
 
+void SAssetActionsTab::FilterAssetData()
+{
+	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
+
+	UnusedAssetsData = AssetActionsManager.FilterForUnusedAssetData(AllAssetsDataFromManager);
+	DuplicatedNameAssetsData = AssetActionsManager.FilterForDuplicateNameData(AllAssetsDataFromManager);
+
+}
+
 void SAssetActionsTab::EnsureAssetDeletionFromLists(const TSharedPtr<FAssetData>& AssetDataToDelete)
 {
 	if (DisplayedAssetsData.Contains(AssetDataToDelete))
@@ -1150,11 +1198,33 @@ void SAssetActionsTab::EnsureAssetDeletionFromLists(const TSharedPtr<FAssetData>
 	{
 		AllAssetsDataFromManager.Remove(AssetDataToDelete);
 	}
+
+	if (UnusedAssetsData.Contains(AssetDataToDelete))
+	{
+		UnusedAssetsData.Remove(AssetDataToDelete);
+	}
+
+	if (DuplicatedNameAssetsData.Contains(AssetDataToDelete))
+	{
+		DuplicatedNameAssetsData.Remove(AssetDataToDelete);
+	}
+}
+
+TMultiMap<FString, FString> SAssetActionsTab::GetCheckBoxAssetMap(const TArray<TSharedPtr<FAssetData>> CheckBoxStateArray)
+{
+	TMultiMap<FString, FString> AssetMap;
+
+	for (TSharedPtr<FAssetData> Asset : CheckBoxStateArray)
+	{
+		AssetMap.Add(Asset->AssetName.ToString(), Asset->GetObjectPathString());
+	}
+
+	return AssetMap;
 }
 
 void SAssetActionsTab::ClearCheckedStates()
 {
-	CheckBoxesMap.Empty();
+	CheckBoxesArray.Empty();
 	CheckedAssets.Empty();
 	UncheckedAssets.Empty();
 }
