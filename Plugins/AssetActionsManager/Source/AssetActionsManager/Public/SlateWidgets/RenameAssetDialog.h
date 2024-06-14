@@ -32,7 +32,7 @@ private:
 	/** Callback for when Cancel is clicked */
 	FReply OnCancelClicked();
 
-	/** Attempts to rename if enter is pressed while editing the tag name */
+	/** Attempts to rename if enter is pressed while editing the asset name */
 	void OnRenameTextCommitted(const FText& InText, ETextCommit::Type InCommitType);
 
 	/** Closes the window that contains this widget */

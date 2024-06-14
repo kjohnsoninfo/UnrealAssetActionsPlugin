@@ -1,7 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "SlateWidgets/RenameAssetDialog.h"
-#include "GameplayTagsManager.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SEditableTextBox.h"
 #include "Widgets/Text/STextBlock.h"
@@ -9,7 +8,6 @@
 #include "Widgets/SWindow.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SGridPanel.h"
-#include "AssetActionsManager.h"
 #include "DebugHelper.h"
 
 #define LOCTEXT_NAMESPACE "RenameAsset"
@@ -87,7 +85,7 @@ void SRenameAssetDialog::Construct(const FArguments& InArgs)
 										.OnClicked(this, &SRenameAssetDialog::OnRenameClicked)
 										[
 											SNew(STextBlock)
-												.Text(LOCTEXT("RenameTagButtonText", "Rename"))
+												.Text(LOCTEXT("RenameButtonText", "Rename"))
 										]
 								]
 

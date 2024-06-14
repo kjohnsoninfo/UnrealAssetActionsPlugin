@@ -223,8 +223,8 @@ private:
 	/** Display a modal dialog to get user input for number of duplicates */
 	int32 GetUserNumberForDuplicates();
 
-	/** Delegate function that checks state of all checkboxes and toggles to unchecked */
-	FReply OnDeselectAllButtonClicked();
+	/** Delegate function that replaces a string or phrase in asset names */
+	FReply OnReplaceStringButtonClicked();
 
 #pragma endregion
 

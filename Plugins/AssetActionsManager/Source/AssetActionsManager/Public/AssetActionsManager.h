@@ -57,6 +57,9 @@ public:
 	/** Add prefixes to assets selected in the user widget */
 	bool AddPrefixesToAssetsInList(const TArray<FAssetData>& AssetsToAddPrefixes);
 
+	/** Add prefixes to assets selected in the user widget */
+	bool ReplaceString(const FString& OldString, const FString& NewString, const TArray<TSharedPtr<FAssetData>>& AssetsToReplace);
+
 	/** Fix up redirectors to ensure asset file paths are accurate */
 	void FixUpRedirectors();
 #pragma endregion

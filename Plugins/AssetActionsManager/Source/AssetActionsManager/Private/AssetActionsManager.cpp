@@ -390,6 +390,46 @@ bool FAssetActionsManagerModule::DuplicateAssetsInList(int32 NumOfDuplicates, co
 	}
 }
 
+bool FAssetActionsManagerModule::ReplaceString(const FString& OldString, const FString& NewString, const TArray<TSharedPtr<FAssetData>>& AssetsToReplace)
+{
+	uint32 Count = 0;
+
+	for (const TSharedPtr<FAssetData>& Asset : AssetsToReplace)
+	{
+		const FString OldAssetName = Asset->AssetName.ToString();
+
+		if (OldAssetName.Contains(OldString, ESearchCase::CaseSensitive))
+		{
+			FString NewAssetName = OldAssetName.Replace(*OldString, *NewString, ESearchCase::CaseSensitive);
+
+			FString OldAssetPath = Asset->GetObjectPathString();
+			// Avoid TryConvertFilenameToLongPackageName warning
+			TArray<FString> PathNameArray;
+			OldAssetPath.ParseIntoArray(PathNameArray, TEXT("."));
+			OldAssetPath = PathNameArray[0];
+
+			const FString NewAssetPath = FPaths::Combine(Asset->PackagePath.ToString(), NewAssetName);
+
+			if (UEditorAssetLibrary::RenameAsset(OldAssetPath, NewAssetPath))
+			{
+				UEditorAssetLibrary::SaveAsset(NewAssetPath, false);
+				++Count;
+			}
+		}
+
+		else { continue; }
+	}
+
+	if (Count > 0)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
 #pragma endregion
 
 void FAssetActionsManagerModule::ShutdownModule()

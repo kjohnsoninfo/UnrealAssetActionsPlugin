@@ -7,12 +7,13 @@
 #include "EditorAssetLibrary.h"
 #include "Widgets/Input/SNumericEntryBox.h"
 #include "SlateWidgets/RenameAssetDialog.h"
+#include "SlateWidgets/ReplaceStringDialog.h"
 #include "Dialog/SCustomDialog.h"
 
 #define LOCTEXT_NAMESPACE "SAssetActionsTab"
 #define DeleteSelected TEXT("Delete Selected")
 #define DuplicateSelected TEXT("Duplicate Selected")
-#define DeselectAll TEXT("Deselect All")
+#define ReplaceStringSelected TEXT("Replace String for Selected")
 #define ListAll TEXT("List All Assets")
 #define ListUnused TEXT("List Unused Assets")
 #define ListDuplicate TEXT("List Duplicate Name Assets")
@@ -171,7 +172,7 @@ void SAssetActionsTab::Construct(const FArguments& InArgs)
 				.FillWidth(10.f)
 				.Padding(5.f)
 				[
-					ConstructButtonForSlot(DeselectAll)
+					ConstructButtonForSlot(ReplaceStringSelected)
 				]
 			]
 
@@ -1021,9 +1022,9 @@ void SAssetActionsTab::AssignButtonClickFns(const FString& ButtonName)
 	{
 		OnDuplicateSelectedButtonClicked();
 	}
-	else if (ButtonName == DeselectAll)
+	else if (ButtonName == ReplaceStringSelected)
 	{
-		OnDeselectAllButtonClicked();
+		OnReplaceStringButtonClicked();
 	}
 }
 
@@ -1071,16 +1072,16 @@ FReply SAssetActionsTab::OnDuplicateSelectedButtonClicked()
 	Duplicate assets by calling manager fn and passing in user input and selected assets
 */
 {
-	int32 NumOfDuplicates = GetUserNumberForDuplicates();
-
-	// Load module
-	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
-
 	if (CheckedAssets.Num() == 0)
 	{
 		DebugHelper::MessageDialogBox(EAppMsgType::Ok, TEXT("No assets selected."));
 		return FReply::Handled();
 	}
+
+	int32 NumOfDuplicates = GetUserNumberForDuplicates();
+
+	// Load module
+	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
 
 	bool bAssetsDuplicated = AssetActionsManager.DuplicateAssetsInList(NumOfDuplicates, CheckedAssets);
 
@@ -1166,11 +1167,55 @@ int32 SAssetActionsTab::GetUserNumberForDuplicates()
 	}
 }
 
-FReply SAssetActionsTab::OnDeselectAllButtonClicked()
+FReply SAssetActionsTab::OnReplaceStringButtonClicked()
 /*
-	Check state of checkboxes in CheckBoxesMap and toggle to unchecked if already checked
+	Replace a string or phrase in asset names
 */
 {
+	if (CheckedAssets.Num() == 0)
+	{
+		DebugHelper::MessageDialogBox(EAppMsgType::Ok, TEXT("No assets selected."));
+		return FReply::Handled();
+	}
+
+	TSharedRef<SWindow> ReplaceStringWindow =
+		SNew(SWindow)
+		.Title(LOCTEXT("ReplaceStringWindowTitle", "Replace String in Assets Names"))
+		.SizingRule(ESizingRule::Autosized)
+		.SupportsMaximize(false)
+		.SupportsMinimize(false);
+
+	TSharedRef<SReplaceStringDialog> ReplaceStringDialog =
+		SNew(SReplaceStringDialog);
+
+	ReplaceStringWindow->SetContent(SNew(SBox)
+		.MinDesiredWidth(320.0f)
+		[
+			ReplaceStringDialog
+		]);
+
+	TSharedPtr<SWindow> CurrentWindow = FSlateApplication::Get().FindWidgetWindow(AsShared());
+
+	FSlateApplication::Get().AddModalWindow(ReplaceStringWindow, CurrentWindow);
+
+	FString OldString = ReplaceStringDialog->OldString;
+	FString NewString = ReplaceStringDialog->NewString;
+
+	if (OldString.IsEmpty() || NewString.IsEmpty())
+	{
+		return FReply::Handled();
+	}
+
+	// Load module
+	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
+
+	bool bStringReplaced = AssetActionsManager.ReplaceString(OldString, NewString, CheckedAssets);
+
+	if (bStringReplaced)
+	{
+		RefreshWidget();
+	}
+
 	return FReply::Handled();
 }
 
