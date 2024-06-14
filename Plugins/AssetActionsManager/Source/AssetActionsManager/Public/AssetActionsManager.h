@@ -48,13 +48,14 @@ public:
 	/** Move content browser location to asset path passed in by widget */
 	void SyncCBToClickedAsset(const FString& ClickedAssetPath);
 
-	/** Add prefixes to assets selected in the user widget */
-	bool AddPrefixesToAssetsInList(const TArray<FAssetData>& AssetsToAddPrefixes);
-
 	/** Rename assets selected in the user widget */
 	bool RenameAssetInList(const FString& NewName, const TSharedPtr<FAssetData>& AssetToRename);
 
-	bool DuplicateAssetsInList(const TArray<FAssetData>& AssetsToDelete);
+	/** Duplicate assets selected in the user widget */
+	bool DuplicateAssetsInList(int32 NumOfDuplicates, const TArray<TSharedPtr<FAssetData>>& AssetsToDuplicate);
+
+	/** Add prefixes to assets selected in the user widget */
+	bool AddPrefixesToAssetsInList(const TArray<FAssetData>& AssetsToAddPrefixes);
 
 	/** Fix up redirectors to ensure asset file paths are accurate */
 	void FixUpRedirectors();

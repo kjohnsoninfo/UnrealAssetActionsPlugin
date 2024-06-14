@@ -31,6 +31,7 @@ public class AssetActionsManager : ModuleRules
 				"EditorScriptingUtilities",
 				"UnrealEd",
 				"AssetTools",
+				"ToolWidgets"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

@@ -1,7 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
-#include "RenameAssetDialog.h"
+#include "SlateWidgets/RenameAssetDialog.h"
 #include "GameplayTagsManager.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SEditableTextBox.h"
@@ -12,7 +11,6 @@
 #include "Widgets/Layout/SGridPanel.h"
 #include "AssetActionsManager.h"
 #include "DebugHelper.h"
-#include "SlateWidgets/AssetActionsWidget.h"
 
 #define LOCTEXT_NAMESPACE "RenameAsset"
 

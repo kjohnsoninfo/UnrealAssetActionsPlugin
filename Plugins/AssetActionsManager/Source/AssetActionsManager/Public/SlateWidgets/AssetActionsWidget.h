@@ -13,7 +13,7 @@ namespace AssetActionsColumns
 	static const FName Name(TEXT("Name")); 
 	static const FName Path(TEXT("Path")); 
 	static const FName RefCount(TEXT("RefCount")); 
-	static const FName Delete(TEXT("Delete")); // unsortable
+	static const FName Rename(TEXT("Rename")); // unsortable
 }
 
 class SAssetActionsTab : public SCompoundWidget
@@ -33,9 +33,6 @@ class SAssetActionsTab : public SCompoundWidget
 		/** Argument for the folder path that user selected when spawning tab */
 		SLATE_ARGUMENT(TArray<FString>, SelectedFoldersPaths)
 
-		/** Argument for new name entered when RenameAssetDialog spawns */
-		SLATE_ARGUMENT(FString, NewAssetName)
-
 	SLATE_END_ARGS()
 
 public:
@@ -50,9 +47,10 @@ public:
 private:
 #pragma region TitleSlot
 	
-	/** Display a title at the top of the widget */
+	/** Display a label at the top of the widget */
 	TSharedRef<STextBlock> ConstructLabelText(const FString& LabelText);
 
+	/** Display title at the top center of the widget */
 	TSharedRef<STextBlock> ConstructTitleText(const FString& TitleText);
 
 	/** Construct Help Button and when clicked, go to documentation webpage */
@@ -98,6 +96,7 @@ private:
 	 */
 	TSharedPtr<SListView<TSharedPtr<FAssetData>>> ConstructedAssetListView;
 
+	/** Checkbox that appears in the header row and triggers select/deselect all fns */
 	TSharedPtr<SCheckBox> HeaderCheckBox;
 
 	/** Currently selected column to sort with; default = Name */
@@ -109,6 +108,7 @@ private:
 	/** Construct SListView to display all assets in selected folder */
 	TSharedRef<SListView<TSharedPtr<FAssetData>>> ConstructAssetListView();
 
+	/** Navigate to selected asset in content browser when its row is doubleclicked */
 	void OnRowDoubleClick(TSharedPtr<FAssetData> ClickedAssetData);
 
 	/** Construct header row label for each column */
@@ -196,13 +196,10 @@ private:
 	/** Construct a rename button for each row in the list view */
 	TSharedRef<SButton> ConstructRenameButtonForRow(const TSharedPtr<FAssetData>& AssetDataToDisplay);
 
-	/** 
-	 * Delegate function that calls the manager delete fn when the delete button in a row is clicked
-	 * 
-	 * @note: This function is for deleting a single asset.
-	 */
+	/** Delegate function that opens a dialog box for the user to enter a new asset name */
 	FReply OnRenameButtonClicked(TSharedPtr<FAssetData> ClickedAssetData);
 
+	/** Call the rename fn from the manager and passes in the user chosen new name */
 	void RenameAsset(const FString& NewName, const TSharedPtr<FAssetData>& AssetToRename);
 
 #pragma endregion
@@ -221,10 +218,10 @@ private:
 	FReply OnDeleteSelectedButtonClicked();
 
 	/** Delegate function that checks state of all checkboxes and toggles to checked */
-	FReply OnDuplicateSelectedButtonClicked(int32 NumOfDuplicates);
+	FReply OnDuplicateSelectedButtonClicked();
 
-	/** Construct a modal dialog to get user input for number of duplicates */
-	int32 ConstructDuplicateAssetsDialogBox();
+	/** Display a modal dialog to get user input for number of duplicates */
+	int32 GetUserNumberForDuplicates();
 
 	/** Delegate function that checks state of all checkboxes and toggles to unchecked */
 	FReply OnDeselectAllButtonClicked();
@@ -247,11 +244,13 @@ private:
 	 */
 	TSharedPtr<SRichTextBlock> ConstructedAssetCountTextBlock;
 
+	/** Array of folder paths that the user selected when spawning widget */
 	TArray<FString> SelectedFoldersPaths;
 
 	/** Construct rich text block to show the count of displayed assets in the list view */
 	TSharedRef<SRichTextBlock> ConstructTextForAssetCount();
 
+	/** Construct text block to show user selected folder paths */
 	TSharedRef<STextBlock> ConstructTextForSelectedFolderPath();
 
 #pragma endregion

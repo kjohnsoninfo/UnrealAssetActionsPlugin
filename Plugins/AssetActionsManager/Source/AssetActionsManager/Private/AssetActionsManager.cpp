@@ -330,6 +330,66 @@ bool FAssetActionsManagerModule::RenameAssetInList(const FString& NewName, const
 	}
 }
 
+bool FAssetActionsManagerModule::DuplicateAssetsInList(int32 NumOfDuplicates, const TArray<TSharedPtr<FAssetData>>& AssetsToDuplicate)
+{
+	uint32 Count = 0;
+
+	if (NumOfDuplicates <= 0) { return false; }
+
+	for (const TSharedPtr<FAssetData>& AssetToDuplicate : AssetsToDuplicate)
+	{
+		for (int32 i = 0; i < NumOfDuplicates; ++i)
+		{
+			FString SourceAssetPath = AssetToDuplicate->GetObjectPathString();
+			// Avoid TryConvertFilenameToLongPackageName warning
+			TArray<FString> PathNameArray;
+			SourceAssetPath.ParseIntoArray(PathNameArray, TEXT("."));
+			SourceAssetPath = PathNameArray[0];
+
+			// Get existing assets to check name
+			TArray<TSharedPtr<FAssetData>> AllAssets = GetAllAssetDataUnderSelectedFolder();
+			TArray<FString> AssetNames;
+
+			for (TSharedPtr<FAssetData> Asset : AllAssets)
+			{
+				AssetNames.AddUnique(Asset->AssetName.ToString());
+			}
+
+			FString DuplicatedAssetName = AssetToDuplicate->AssetName.ToString() + FString::FromInt(i + 1);
+
+			// if duplicated name already found, add number to suffix
+			for (int32 j = 1; j < AssetNames.Num(); ++j)
+			{
+				DebugHelper::PrintLog(FString::FromInt(j));
+				DebugHelper::PrintLog(AssetNames[j]);
+				if (AssetNames[j] == DuplicatedAssetName)
+				{
+					DuplicatedAssetName = AssetToDuplicate->AssetName.ToString() + FString::FromInt(i + 1 + j);
+					DebugHelper::PrintLog("add"+DuplicatedAssetName);
+				}
+			}
+
+			const FString NewAssetPath = FPaths::Combine(AssetToDuplicate->PackagePath.ToString(), DuplicatedAssetName);
+
+			if (UEditorAssetLibrary::DuplicateAsset(SourceAssetPath, NewAssetPath))
+			{
+				UEditorAssetLibrary::SaveAsset(NewAssetPath, false);
+				++Count;
+			}
+		}
+	}
+
+	if (Count > 0)
+	{
+		return true;
+	}
+
+	else
+	{
+		return false;
+	}
+}
+
 #pragma endregion
 
 void FAssetActionsManagerModule::ShutdownModule()

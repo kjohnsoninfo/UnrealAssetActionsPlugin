@@ -5,9 +5,9 @@
 #include "DebugHelper.h"
 #include "AssetActionsManager.h"
 #include "EditorAssetLibrary.h"
-#include "Dialogs/Dialogs.h"
 #include "Widgets/Input/SNumericEntryBox.h"
-#include "RenameAssetDialog.h"
+#include "SlateWidgets/RenameAssetDialog.h"
+#include "Dialog/SCustomDialog.h"
 
 #define LOCTEXT_NAMESPACE "SAssetActionsTab"
 #define DeleteSelected TEXT("Delete Selected")
@@ -419,7 +419,7 @@ TSharedRef<SListView<TSharedPtr<FAssetData>>> SAssetActionsTab::ConstructAssetLi
 				ConstructTextForHeaderRow(TEXT("# of Refs"))
 			]
 
-			+ SHeaderRow::Column(AssetActionsColumns::Delete)
+			+ SHeaderRow::Column(AssetActionsColumns::Rename)
 			.FillWidth(.8f)
 			.DefaultLabel(FText::FromString(TEXT("")))
 		);
@@ -909,7 +909,7 @@ TSharedRef<STextBlock> SAssetActionsTab::ConstructTextForRow(const FString& RowT
 
 TSharedRef<SButton> SAssetActionsTab::ConstructRenameButtonForRow(const TSharedPtr<FAssetData>& AssetDataToDisplay)
 /*
-	Construct delete button that deletes a single asset for each row in the list view
+	Construct rename button for each row in the list view
 */
 {
 	TSharedRef<SButton> ConstructedRenameButton =
@@ -923,7 +923,7 @@ TSharedRef<SButton> SAssetActionsTab::ConstructRenameButtonForRow(const TSharedP
 
 FReply SAssetActionsTab::OnRenameButtonClicked(TSharedPtr<FAssetData> ClickedAssetData)
 /*
-	Delete a single asset by passing in AssetDataToDisplay for the clicked row
+	Rename a single asset by passing in AssetDataToDisplay for the clicked row
 */
 {
 	TSharedRef<SWindow> RenameAssetWindow =
@@ -1019,7 +1019,7 @@ void SAssetActionsTab::AssignButtonClickFns(const FString& ButtonName)
 	}
 	else if (ButtonName == DuplicateSelected)
 	{
-		OnDuplicateSelectedButtonClicked(0);
+		OnDuplicateSelectedButtonClicked();
 	}
 	else if (ButtonName == DeselectAll)
 	{
@@ -1066,37 +1066,104 @@ FReply SAssetActionsTab::OnDeleteSelectedButtonClicked()
 	return FReply::Handled();
 }
 
-FReply SAssetActionsTab::OnDuplicateSelectedButtonClicked(int32 NumOfDuplicates)
+FReply SAssetActionsTab::OnDuplicateSelectedButtonClicked()
 /*
-	Check state of checkboxes in CheckBoxesArray and toggle to checked if not already checked
+	Duplicate assets by calling manager fn and passing in user input and selected assets
 */
 {
+	int32 NumOfDuplicates = GetUserNumberForDuplicates();
+
+	// Load module
+	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
+
+	if (CheckedAssets.Num() == 0)
+	{
+		DebugHelper::MessageDialogBox(EAppMsgType::Ok, TEXT("No assets selected."));
+		return FReply::Handled();
+	}
+
+	bool bAssetsDuplicated = AssetActionsManager.DuplicateAssetsInList(NumOfDuplicates, CheckedAssets);
+
+	if (bAssetsDuplicated)
+	{
+		RefreshWidget();
+	}
+
 	return FReply::Handled();
 }
 
-int32 SAssetActionsTab::ConstructDuplicateAssetsDialogBox()
+int32 SAssetActionsTab::GetUserNumberForDuplicates()
 {
-	//int32 NumOfDuplicates = 0;
+	int32 NumOfDuplicates = 1;
+	bool bEnterPressed = false;
 
-	//TSharedRef<SNumericEntryBox<int32>> ConstructedNumEntry =
-	//	SNew(SNumericEntryBox<int32>)
-	//	.AllowSpin(true)
-	//	.Font(SharedTextFont)
-	//	.MinValue(1)
-	//	.MaxValue(25)
-	//	.MinSliderValue(1)
-	//	.MaxSliderValue(25)
-	//	.Value(1)
-	//	.Value_Lambda([&] { return TOptional<int32>(NumOfDuplicates); })
-	//	.OnValueChanged_Lambda([&](int32 InValue) { NumOfDuplicates = InValue; })
-	//	.OnValueCommitted_Lambda([&](int32 InValue, ETextCommit::Type CommitInfo) { NumOfDuplicates = InValue; });
+	TSharedRef<SCustomDialog> DuplicateAssetsDialog =
+		SNew(SCustomDialog)
+		.Title(FText::FromString(DuplicateSelected))
+		.HAlignContent(HAlign_Center)
+		.HAlignButtonBox(HAlign_Fill)
+		.ButtonAreaPadding(5.f)
+		.Content()
+		[
+			SNew(SHorizontalBox)
 
-	//SGenericDialogWidget::FArguments DialogArgs;
-	//
-	//SGenericDialogWidget::OpenDialog(FText::FromString(TEXT("Duplicate Assets")),
-	//	ConstructedNumEntry, DialogArgs, false);
+			+ SHorizontalBox::Slot()
+			.Padding(5.f)
+			.AutoWidth()
+			.VAlign(EVerticalAlignment::VAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text(FText::FromString(TEXT("Number of duplicates: ")))
+				.Font(SharedTextFont)
+				.ColorAndOpacity(FColor::White)
+			]
 
-	return 0;
+			+ SHorizontalBox::Slot()
+			.Padding(2.f)
+			.FillWidth(25.f)
+			[
+				SNew(SNumericEntryBox<int32>)
+					.AllowSpin(false)
+					.Font(SharedTextFont)
+					.MinValue(1)
+					.MaxValue(25)
+					.Value(1)
+					.Value_Lambda([&] { return TOptional<int32>(NumOfDuplicates); })
+					.OnValueChanged_Lambda([&](int32 InValue) { NumOfDuplicates = InValue; })
+					.OnValueCommitted_Lambda(
+						[&](int32 InValue, ETextCommit::Type CommitInfo) 
+						{
+							if (CommitInfo == ETextCommit::OnEnter)
+							{
+								NumOfDuplicates = InValue;
+								DuplicateAssetsDialog->RequestDestroyWindow();
+								bEnterPressed = true;
+							}
+							else
+							{
+								NumOfDuplicates = InValue;
+							}
+						})
+			]
+		]
+		.Buttons({
+			SCustomDialog::FButton(LOCTEXT("Cancel", "Cancel")),
+			SCustomDialog::FButton(LOCTEXT("OK", "OK"))
+			});;
+
+	const int ButtonPressed = DuplicateAssetsDialog->ShowModal();
+
+	DebugHelper::Print("button"+ FString::FromInt(ButtonPressed));
+	
+	if (ButtonPressed == 1 || bEnterPressed)
+	{
+		return NumOfDuplicates;
+	}
+
+	else
+	{
+		return 0;
+	}
 }
 
 FReply SAssetActionsTab::OnDeselectAllButtonClicked()
