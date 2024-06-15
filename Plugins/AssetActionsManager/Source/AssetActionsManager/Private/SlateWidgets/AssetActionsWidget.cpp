@@ -253,7 +253,7 @@ FReply SAssetActionsTab::OnHelpButtonClicked()
 	When help button is clicked, launch the specified url
 */
 {
-	const FString& HelpUrl = "https://www.unrealengine.com/en-US"; 
+	const FString& HelpUrl = "https://jiratrialdls.atlassian.net/wiki/spaces/KB/pages/8618054/Quick+Asset+Actions+-+UE5+Plugin"; 
 	FPlatformProcess::LaunchURL(*HelpUrl, NULL, NULL);
 	
 	return FReply::Handled();
