@@ -1,18 +1,17 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "SlateWidgets/ReplaceStringDialog.h"
-#include "GameplayTagsManager.h"
+
+#include "DebugHelper.h"
+#include "Framework/Application/SlateApplication.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SEditableTextBox.h"
-#include "Widgets/Text/STextBlock.h"
-#include "Framework/Application/SlateApplication.h"
-#include "Widgets/SWindow.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SGridPanel.h"
-#include "AssetActionsManager.h"
-#include "DebugHelper.h"
+#include "Widgets/Text/STextBlock.h"
+#include "Widgets/SWindow.h"
 
-#define LOCTEXT_NAMESPACE "RenameAsset"
+#define LOCTEXT_NAMESPACE "ReplaceString"
 
 void SReplaceStringDialog::Construct(const FArguments& InArgs)
 {
@@ -38,7 +37,7 @@ void SReplaceStringDialog::Construct(const FArguments& InArgs)
 								.Font(DialogFont)
 						]
 
-						// Current name display
+						// String to replace entry
 						+ SGridPanel::Slot(0, 1)
 						.Padding(2)
 						.VAlign(VAlign_Center)
@@ -59,7 +58,7 @@ void SReplaceStringDialog::Construct(const FArguments& InArgs)
 								.OnTextCommitted(this, &SReplaceStringDialog::OnReplaceTextCommitted)
 						]
 
-						// New name controls
+						// New string entry 
 						+ SGridPanel::Slot(0, 2)
 						.Padding(2)
 						.VAlign(VAlign_Center)

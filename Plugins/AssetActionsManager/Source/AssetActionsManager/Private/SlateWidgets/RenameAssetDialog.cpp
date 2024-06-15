@@ -1,14 +1,15 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "SlateWidgets/RenameAssetDialog.h"
+
+#include "DebugHelper.h"
+#include "Framework/Application/SlateApplication.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SEditableTextBox.h"
-#include "Widgets/Text/STextBlock.h"
-#include "Framework/Application/SlateApplication.h"
-#include "Widgets/SWindow.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SGridPanel.h"
-#include "DebugHelper.h"
+#include "Widgets/Text/STextBlock.h"
+#include "Widgets/SWindow.h"
 
 #define LOCTEXT_NAMESPACE "RenameAsset"
 

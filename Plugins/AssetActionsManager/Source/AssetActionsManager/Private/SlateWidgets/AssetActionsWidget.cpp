@@ -2,19 +2,21 @@
 
 
 #include "SlateWidgets/AssetActionsWidget.h"
-#include "DebugHelper.h"
+
 #include "AssetActionsManager.h"
-#include "EditorAssetLibrary.h"
-#include "Widgets/Input/SNumericEntryBox.h"
+#include "DebugHelper.h"
+#include "Dialog/SCustomDialog.h"
 #include "SlateWidgets/RenameAssetDialog.h"
 #include "SlateWidgets/ReplaceStringDialog.h"
-#include "Dialog/SCustomDialog.h"
+#include "Widgets/Input/SNumericEntryBox.h"
 
 #define LOCTEXT_NAMESPACE "SAssetActionsTab"
+
 #define AddPrefixSelected TEXT("Add Prefixes for Selected")
 #define DeleteSelected TEXT("Delete Selected")
 #define DuplicateSelected TEXT("Duplicate Selected")
 #define ReplaceStringSelected TEXT("Replace String for Selected")
+
 #define ListAll TEXT("List All Assets")
 #define ListUnused TEXT("List Unused Assets")
 #define ListDuplicate TEXT("List Duplicate Name Assets")
@@ -52,7 +54,7 @@ void SAssetActionsTab::Construct(const FArguments& InArgs)
 			// Parent box to hold all interior widgets
 			SNew(SVerticalBox)
 
-			// First slot for title and help icon
+			// First slot for title, label, and help icon
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			[
@@ -84,13 +86,13 @@ void SAssetActionsTab::Construct(const FArguments& InArgs)
 				]
 			]
 
-			// Second slot for search and filter options
+			// Second slot for filter options and refresh btn
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			[
 				SNew(SHorizontalBox)
 
-				// Filter
+				// Filter dropdown
 				+ SHorizontalBox::Slot()
 				.AutoWidth()
 				.Padding(5.f, 0.f)
@@ -98,10 +100,7 @@ void SAssetActionsTab::Construct(const FArguments& InArgs)
 					ConstructFilterComboBox()
 				]
 
-				// Search Bar
-				+ SHorizontalBox::Slot()
-
-				// Manual Refresh
+				// Manual Refresh btn
 				+ SHorizontalBox::Slot()
 				.HAlign(HAlign_Right)
 				.VAlign(VAlign_Top)
@@ -139,7 +138,7 @@ void SAssetActionsTab::Construct(const FArguments& InArgs)
 					ConstructTextForAssetCount()
 				]
 
-				// Current folder path
+				// Selected folder path
 				+ SHorizontalBox::Slot()
 				.HAlign(HAlign_Right)
 				.FillWidth(12.f)
@@ -149,7 +148,7 @@ void SAssetActionsTab::Construct(const FArguments& InArgs)
 				]
 			]
 
-			// Fifth slot for quick buttons 
+			// Fifth slot for bulk action buttons 
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			[
@@ -189,7 +188,11 @@ void SAssetActionsTab::Construct(const FArguments& InArgs)
 
 		];
 
-		FilterAssetData();
+		// only need to filter data if we haven't already
+		if (UnusedAssetsData.IsEmpty() || DuplicatedNameAssetsData.IsEmpty() || NoPrefixAssetsData.IsEmpty())
+		{
+			FilterAssetData();
+		}
 }
 
 #pragma region TitleBar
@@ -228,7 +231,7 @@ TSharedRef<STextBlock> SAssetActionsTab::ConstructTitleText(const FString& Title
 
 TSharedRef<SButton> SAssetActionsTab::ConstructHelpButton()
 /*
-	Construct a help button that opens a webpage in the browser that points to documentation for the widget
+	Construct a help button that opens a webpage in the browser that points to documentation for the tool
 */
 {
 	TSharedRef<SButton> ConstructedHelpButton =
@@ -253,7 +256,7 @@ FReply SAssetActionsTab::OnHelpButtonClicked()
 	When help button is clicked, launch the specified url
 */
 {
-	const FString& HelpUrl = "https://jiratrialdls.atlassian.net/wiki/spaces/KB/pages/8618054/Quick+Asset+Actions+-+UE5+Plugin"; 
+	const FString& HelpUrl = "https://github.com/kjohnsoninfo/UnrealAssetActionsPlugin"; 
 	FPlatformProcess::LaunchURL(*HelpUrl, NULL, NULL);
 	
 	return FReply::Handled();
@@ -273,7 +276,7 @@ TSharedRef<SComboBox<TSharedPtr<FString>>> SAssetActionsTab::ConstructFilterComb
 		.OptionsSource(&FilterListItems)
 		.OnGenerateWidget(this, &SAssetActionsTab::OnGenerateFilterItem) // must generate an SWidget
 		.OnSelectionChanged(this, &SAssetActionsTab::OnFilterSelectionChanged)
-		// Combo Box has a slot for text shown on construction
+		// Combo Box has a slot for text shown on construction; this is required
 		[
 			SAssignNew(ComboBoxDisplayedText, STextBlock)
 			.Text(FText::FromString(ListAll)) // default list all
@@ -362,7 +365,7 @@ TSharedRef<SButton> SAssetActionsTab::ConstructRefreshButton()
 
 FReply SAssetActionsTab::OnRefreshButtonClicked()
 /*
-	When refresh button is clicked, refresh asset list view
+	When refresh button is clicked, refresh asset list view and notify user
 */
 {
 	RefreshWidget();
@@ -450,8 +453,10 @@ TSharedRef<SListView<TSharedPtr<FAssetData>>> SAssetActionsTab::ConstructAssetLi
 }
 
 void SAssetActionsTab::OnRowDoubleClick(TSharedPtr<FAssetData> ClickedAssetData)
+/*
+	Navigate the content browser to the asset in the row doubleclicked on
+*/
 {
-	// Load module
 	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
 
 	AssetActionsManager.SyncCBToClickedAsset(ClickedAssetData->GetObjectPathString());
@@ -486,9 +491,13 @@ TSharedRef<SCheckBox> SAssetActionsTab::ConstructCheckBoxForHeaderRow()
 }
 
 void SAssetActionsTab::OnHeaderCheckBoxStateChanged(ECheckBoxState CheckBoxState)
+/*
+	Select all or deselect all checkboxes in the rows depending on the state of the header checkbox
+*/
 {
 	switch (CheckBoxState)
 	{
+	// deselect all
 	case ECheckBoxState::Unchecked:
 
 		if (CheckBoxesArray.Num() == 0) return;
@@ -502,6 +511,8 @@ void SAssetActionsTab::OnHeaderCheckBoxStateChanged(ECheckBoxState CheckBoxState
 		}
 
 		break;
+
+	// select all
 	case ECheckBoxState::Checked:
 
 		if (CheckBoxesArray.Num() == 0) return;
@@ -515,6 +526,7 @@ void SAssetActionsTab::OnHeaderCheckBoxStateChanged(ECheckBoxState CheckBoxState
 		}
 
 		break;
+
 	case ECheckBoxState::Undetermined:
 		break;
 	default:
@@ -524,7 +536,7 @@ void SAssetActionsTab::OnHeaderCheckBoxStateChanged(ECheckBoxState CheckBoxState
 
 void SAssetActionsTab::DefaultSorting()
 /*
-	Sets default sort column, sort mode, and sorting on widget spawn
+	Sets default sort column and sort mode and sorts list view on widget spawn
 */
 {
 	SortByColumn = AssetActionsColumns::Name;
@@ -561,7 +573,7 @@ void SAssetActionsTab::OnSortModeChanged(const EColumnSortPriority::Type SortPri
 void SAssetActionsTab::UpdateSorting()
 /*
 	Sort DisplayedAssetData by comparing the data within the user selected column; called in RefreshWidget
-	Utilizes lambda expressions to define sorting functions
+	Utilizes lambda fns to define sorting functions
 */
 {
 
@@ -659,7 +671,6 @@ void SAssetActionsTab::UpdateSorting()
 	// Sort by asset reference count
 	if (SortByColumn == AssetActionsColumns::RefCount)
 	{
-		// Load manager module
 		FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
 
 		if (SortMode == EColumnSortMode::Ascending)
@@ -704,10 +715,8 @@ TSharedRef<ITableRow> SAssetActionsTab::OnGenerateRowForListView(TSharedPtr<FAss
 	const FString AssetClass = AssetDataToDisplay->GetClass()->GetName();
 	const FString AssetParentFolder = AssetDataToDisplay->PackagePath.ToString();
 	
-	// Load manager module
+	// Load manager module and call referencer count fn
 	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
-
-	// Call referencer count fn
 	const FString AssetRefCount = FString::FromInt(AssetActionsManager.GetAssetReferencersCount(AssetDataToDisplay));
 
 	// return a ref to a table row to the OnGenerateRow fn
@@ -763,7 +772,7 @@ TSharedRef<ITableRow> SAssetActionsTab::OnGenerateRowForListView(TSharedPtr<FAss
 					ConstructTextForRow(AssetRefCount)
 				]
 
-				// Sixth slot for rename
+				// Sixth slot for rename btn
 				+ SHorizontalBox::Slot()
 				.HAlign(HAlign_Right)
 				.VAlign(VAlign_Fill)
@@ -780,7 +789,7 @@ TSharedRef<ITableRow> SAssetActionsTab::OnGenerateRowForListView(TSharedPtr<FAss
 
 TSharedRef<SCheckBox> SAssetActionsTab::ConstructCheckBoxes(const TSharedPtr<FAssetData>& AssetDataToDisplay)
 /*
-	Generate a SCheckBox for each row, add to CheckBoxMap, and set checkbox to previously checked state
+	Generate a SCheckBox for each row, add to CheckBoxArray, and set checkbox to previously checked state
 */
 {
 	TSharedRef<SCheckBox> ConstructedCheckBox =
@@ -790,6 +799,7 @@ TSharedRef<SCheckBox> SAssetActionsTab::ConstructCheckBoxes(const TSharedPtr<FAs
 
 	CheckBoxesArray.Add(ConstructedCheckBox);
 
+	// set checkboxes to previous state
 	TMultiMap<FString, FString> CheckedAssetMap = GetCheckBoxAssetMap(CheckedAssets);
 	TMultiMap<FString, FString> UncheckedAssetMap = GetCheckBoxAssetMap(UncheckedAssets);
 	FString AssetName = AssetDataToDisplay->AssetName.ToString();
@@ -815,18 +825,22 @@ TSharedRef<SCheckBox> SAssetActionsTab::ConstructCheckBoxes(const TSharedPtr<FAs
 }
 
 void SAssetActionsTab::OnCheckBoxStateChanged(ECheckBoxState CheckBoxState, TSharedPtr<FAssetData> ClickedAssetData)
+/* 
+	Add assets to checked and unchecked arrays and set header state based on row checkbox state
+*/
 {
+	// Finding checkbox state based on both asset name and asset path
 	TMultiMap<FString, FString> CheckedAssetMap = GetCheckBoxAssetMap(CheckedAssets);
 	TMultiMap<FString, FString> UncheckedAssetMap = GetCheckBoxAssetMap(UncheckedAssets);
 	FString AssetName = ClickedAssetData->AssetName.ToString();
 	FString AssetPath = ClickedAssetData->GetObjectPathString();
 
-	// Add or remove assets from delete array and set header state based on row checkbox state
 	switch (CheckBoxState)
 	{
 	case ECheckBoxState::Unchecked:
 
 		// if found in checked assets, remove asset
+		
 		if (CheckedAssetMap.FindPair(AssetName, AssetPath) != nullptr) 
 		{
 			TArray<TSharedPtr<FAssetData>> AssetsToRemove;
@@ -864,6 +878,7 @@ void SAssetActionsTab::OnCheckBoxStateChanged(ECheckBoxState CheckBoxState, TSha
 		}
 
 		break;
+
 	case ECheckBoxState::Checked:
 
 		// if found in unchecked assets, remove asset
@@ -904,6 +919,7 @@ void SAssetActionsTab::OnCheckBoxStateChanged(ECheckBoxState CheckBoxState, TSha
 		}
 
 		break;
+
 	case ECheckBoxState::Undetermined:
 		break;
 	default:
@@ -946,6 +962,7 @@ FReply SAssetActionsTab::OnRenameButtonClicked(TSharedPtr<FAssetData> ClickedAss
 	Rename a single asset by passing in AssetDataToDisplay for the clicked row
 */
 {
+	// Spawn modal window/dialog to get user inputs
 	TSharedRef<SWindow> RenameAssetWindow =
 		SNew(SWindow)
 		.Title(LOCTEXT("RenameAssetWindowTitle", "Rename Asset"))
@@ -967,6 +984,7 @@ FReply SAssetActionsTab::OnRenameButtonClicked(TSharedPtr<FAssetData> ClickedAss
 
 	FSlateApplication::Get().AddModalWindow(RenameAssetWindow, CurrentWindow);
 
+	// Rename asset based on user input passed in by dialog
 	FString NewName = RenameAssetDialog->NewName;
 	RenameAsset(NewName, ClickedAssetData);
 
@@ -974,8 +992,10 @@ FReply SAssetActionsTab::OnRenameButtonClicked(TSharedPtr<FAssetData> ClickedAss
 }
 
 void SAssetActionsTab::RenameAsset(const FString& NewName, const TSharedPtr<FAssetData>& AssetToRename)
+/* 
+	Call manager fn to rename clicked asset and if asset is successfully renamed, refresh widget
+*/
 {
-	// Load module
 	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
 
 	if (NewName.IsEmpty()) { return; }
@@ -1052,6 +1072,9 @@ void SAssetActionsTab::AssignButtonClickFns(const FString& ButtonName)
 }
 
 FReply SAssetActionsTab::OnAddPrefixButtonClicked()
+/*
+	Attempts to add prefixes to all assets in CheckedAssets and if successful, refreshes widget
+*/
 {
 	if (CheckedAssets.Num() == 0)
 	{
@@ -1059,9 +1082,8 @@ FReply SAssetActionsTab::OnAddPrefixButtonClicked()
 		return FReply::Handled();
 	}
 
-	// Load module
+	// Call add prefix fn from manager module passing in the checked data
 	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
-
 	bool bPrefixesAdded = AssetActionsManager.AddPrefixesToAssetsInList(CheckedAssets);
 
 	if (bPrefixesAdded)
@@ -1074,7 +1096,7 @@ FReply SAssetActionsTab::OnAddPrefixButtonClicked()
 
 FReply SAssetActionsTab::OnDeleteSelectedButtonClicked()
 /*
-	Deletes all assets in CheckedAssetsToDeleteArray
+	Attempts to delete all assets in CheckedAssets and if successful, refreshes widget
 */
 {
 	if (CheckedAssets.Num() == 0)
@@ -1091,13 +1113,11 @@ FReply SAssetActionsTab::OnDeleteSelectedButtonClicked()
 		AssetsToDelete.Add(*AssetData.Get());
 	}
 
-	// Load manager module
-	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
-
 	// Call delete fn from manager module passing in the checked data
+	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
 	bool bAssetDeleted = AssetActionsManager.DeleteAssetsInList(AssetsToDelete);
 
-	// Remove from list view if asset was deleted
+	// Remove from list view if asset was deleted and refresh widget
 	if (bAssetDeleted)
 	{
 		for (const TSharedPtr<FAssetData>& DeletedAsset : CheckedAssets)
@@ -1113,7 +1133,7 @@ FReply SAssetActionsTab::OnDeleteSelectedButtonClicked()
 
 FReply SAssetActionsTab::OnDuplicateSelectedButtonClicked()
 /*
-	Duplicate assets by calling manager fn and passing in user input and selected assets
+	Attempts to duplicate all assets in CheckedAssets and if successful, refreshes widget
 */
 {
 	if (CheckedAssets.Num() == 0)
@@ -1122,11 +1142,11 @@ FReply SAssetActionsTab::OnDuplicateSelectedButtonClicked()
 		return FReply::Handled();
 	}
 
+	// Spawn modal dialog to get user input
 	int32 NumOfDuplicates = GetUserNumberForDuplicates();
 
-	// Load module
+	// Call duplicate fn from manager module passing in the user input and checked data
 	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
-
 	bool bAssetsDuplicated = AssetActionsManager.DuplicateAssetsInList(NumOfDuplicates, CheckedAssets);
 
 	if (bAssetsDuplicated)
@@ -1138,6 +1158,9 @@ FReply SAssetActionsTab::OnDuplicateSelectedButtonClicked()
 }
 
 int32 SAssetActionsTab::GetUserNumberForDuplicates()
+/*
+	Spawns a custom dialog that asks for user numeric entry 
+*/
 {
 	int32 NumOfDuplicates = 1;
 	bool bEnterPressed = false;
@@ -1178,6 +1201,7 @@ int32 SAssetActionsTab::GetUserNumberForDuplicates()
 					.OnValueCommitted_Lambda(
 						[&](int32 InValue, ETextCommit::Type CommitInfo) 
 						{
+							// allow user to press keyboard enter as "OK"
 							if (CommitInfo == ETextCommit::OnEnter)
 							{
 								NumOfDuplicates = InValue;
@@ -1198,13 +1222,12 @@ int32 SAssetActionsTab::GetUserNumberForDuplicates()
 
 	const int ButtonPressed = DuplicateAssetsDialog->ShowModal();
 
-	DebugHelper::Print("button"+ FString::FromInt(ButtonPressed));
-	
 	if (ButtonPressed == 1 || bEnterPressed)
 	{
 		return NumOfDuplicates;
 	}
 
+	// user entry was cancelled
 	else
 	{
 		return 0;
@@ -1213,7 +1236,7 @@ int32 SAssetActionsTab::GetUserNumberForDuplicates()
 
 FReply SAssetActionsTab::OnReplaceStringButtonClicked()
 /*
-	Replace a string or phrase in asset names
+	Attempts to replace string in all asset names in CheckedAssets and if successful, refreshes widget
 */
 {
 	if (CheckedAssets.Num() == 0)
@@ -1222,6 +1245,7 @@ FReply SAssetActionsTab::OnReplaceStringButtonClicked()
 		return FReply::Handled();
 	}
 
+	// Spawn a dialog for user input
 	TSharedRef<SWindow> ReplaceStringWindow =
 		SNew(SWindow)
 		.Title(LOCTEXT("ReplaceStringWindowTitle", "Replace String in Assets Names"))
@@ -1250,9 +1274,8 @@ FReply SAssetActionsTab::OnReplaceStringButtonClicked()
 		return FReply::Handled();
 	}
 
-	// Load module
+	// Call replace string fn from manager module passing in the user input and checked data
 	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
-
 	bool bStringReplaced = AssetActionsManager.ReplaceString(OldString, NewString, CheckedAssets);
 
 	if (bStringReplaced)
@@ -1268,6 +1291,9 @@ FReply SAssetActionsTab::OnReplaceStringButtonClicked()
 #pragma region HelpfulInfoSlot
 
 TSharedRef<SRichTextBlock> SAssetActionsTab::ConstructTextForAssetCount()
+/*
+	Construct a textblock that can be dynamically refreshed that keeps track of displayed asset count
+*/
 {
 	const FTextBlockStyle TextBlockStyle = 
 		FTextBlockStyle().SetFont(SharedTextFont).SetColorAndOpacity(FColor::White);
@@ -1335,13 +1361,13 @@ TSharedRef<STextBlock> SAssetActionsTab::ConstructTextForSelectedFolderPath()
 
 void SAssetActionsTab::RefreshWidget()
 /*
-	Refresh to ensure AssetListView and AssetCount is always up to date
+	Refresh asset data and source items to ensure AssetListView and AssetCount is always up to date
 */
 {
-	// Load module
+	// Call fix up redirectors fn from manager module
 	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
-
 	AssetActionsManager.FixUpRedirectors();
+
 	// Refresh source items to pick up changes
 	AllAssetsDataFromManager = AssetActionsManager.GetAllAssetDataUnderSelectedFolder();
 
@@ -1387,6 +1413,9 @@ void SAssetActionsTab::RefreshWidget()
 }
 
 void SAssetActionsTab::FilterAssetData()
+/*
+	Call all the filter fns from the manager module and sets the appropriate asset data variable
+*/
 {
 	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
 
@@ -1396,6 +1425,9 @@ void SAssetActionsTab::FilterAssetData()
 }
 
 void SAssetActionsTab::EnsureAssetDeletionFromLists(const TSharedPtr<FAssetData>& AssetDataToDelete)
+/*
+	Remove deleted assets from all asset data arrays if they contain the deleted asset
+*/
 {
 	if (DisplayedAssetsData.Contains(AssetDataToDelete))
 	{
@@ -1424,6 +1456,10 @@ void SAssetActionsTab::EnsureAssetDeletionFromLists(const TSharedPtr<FAssetData>
 }
 
 TMultiMap<FString, FString> SAssetActionsTab::GetCheckBoxAssetMap(const TArray<TSharedPtr<FAssetData>> CheckBoxStateArray)
+/*
+	Returns a multimap of asset names to asset paths
+	This is important for setting a checkbox state to its previous state
+*/
 {
 	TMultiMap<FString, FString> AssetMap;
 

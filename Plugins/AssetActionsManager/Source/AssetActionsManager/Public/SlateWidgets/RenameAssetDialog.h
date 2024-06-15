@@ -14,7 +14,7 @@ public:
 		: _AssetData()
 		, _Padding(FMargin(15))
 		{}
-		SLATE_ARGUMENT(TSharedPtr<FAssetData>, AssetData)		// The asset we want to rename
+		SLATE_ARGUMENT(TSharedPtr<FAssetData>, AssetData)
 			SLATE_ARGUMENT(FMargin, Padding)
 	SLATE_END_ARGS()
 
@@ -23,10 +23,10 @@ public:
 	FString NewName;
 
 private:
-	/** Renames the asset based on dialog parameters */
+	/** Renames the asset based user input */
 	FReply OnRenameClicked();
 
-	/** Sends new name and attempts to close the active window */
+	/** Returns new name and attempts to close the active window */
 	FString RenameAndClose();
 
 	/** Callback for when Cancel is clicked */

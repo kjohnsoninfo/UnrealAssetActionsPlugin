@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include "Blueprint/UserWidget.h"
 #include "Modules/ModuleManager.h"
 
 class FAssetActionsManagerModule : public IModuleInterface
@@ -20,6 +19,12 @@ public:
 	
 	/** Get count of all asset referencers for single asset */
 	int32 GetAssetReferencersCount(const TSharedPtr<FAssetData>& AssetData);
+
+	/** Move content browser location to asset path passed in by widget */
+	void SyncCBToClickedAsset(const FString& ClickedAssetPath);
+
+	/** Fix up redirectors to ensure asset file paths are accurate */
+	void FixUpRedirectors();
 
 	/** Get unused assets by filtering all assets */
 	TArray<TSharedPtr<FAssetData>> FilterForUnusedAssetData(const TArray<TSharedPtr<FAssetData>>& AssetDataToFilter);
@@ -39,9 +44,6 @@ public:
 	 */
 	bool DeleteAssetsInList(const TArray<FAssetData>& AssetsToDelete);
 
-	/** Move content browser location to asset path passed in by widget */
-	void SyncCBToClickedAsset(const FString& ClickedAssetPath);
-
 	/** Rename assets selected in the user widget */
 	bool RenameAssetInList(const FString& NewName, const TSharedPtr<FAssetData>& AssetToRename);
 
@@ -54,32 +56,30 @@ public:
 	/** Add prefixes to assets selected in the user widget */
 	bool ReplaceString(const FString& OldString, const FString& NewString, const TArray<TSharedPtr<FAssetData>>& AssetsToReplace);
 
-	/** Fix up redirectors to ensure asset file paths are accurate */
-	void FixUpRedirectors();
 #pragma endregion
 
 private:
 #pragma region ExtendContentBrowserMenu
 	
 	/** Array to hold folder paths of user selected folder
-	* @note: This is based on the folder that the user right-clicks in the content browser
-	*/
+	 * @note: This is based on the folder that the user right-clicks in the content browser
+	 */
 	TArray<FString> SelectedFolderPaths;
 
 	/** Extend menu options in the right-click menu of the Content Browser */
 	void InitCBMenuExtension();
 
 	/** Delegate function to add a custom entry to the right-click menu  
-	* @note: This is bound in the InitCBMenuExtension fn
-	*/
+	 * @note: This is bound in the InitCBMenuExtension fn
+	 */
 	TSharedRef<FExtender> CustomCBMenuExtender(const TArray<FString>& SelectedPaths);
 
 	/** Delegate function to create the new menu entry added to the rigjt-click menu
-	* @note: This is bound in the CustomCBMenuExtender fn
-	*/
+	 * @note: This is bound in the CustomCBMenuExtender fn
+	 */
 	void AddCBMenuEntry(FMenuBuilder& MenuBuilder);
 
-	/** Spawn tab when the Advanced Deletion menu entry is clicked */
+	/** Spawn tab when the Quick Asset Actions menu entry is clicked */
 	void OnAssetActionsMenuEntryClicked();
 
 #pragma endregion

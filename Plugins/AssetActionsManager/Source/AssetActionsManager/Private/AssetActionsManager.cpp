@@ -1,14 +1,14 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "AssetActionsManager.h"
-#include "DebugHelper.h"
+#include "AssetToolsModule.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "AssetViewUtils.h"
 #include "ContentBrowserModule.h" 
-#include "SlateWidgets/AssetActionsWidget.h"
+#include "DebugHelper.h"
 #include "EditorAssetLibrary.h"
 #include "ObjectTools.h"
-#include "AssetToolsModule.h"
-#include "AssetViewUtils.h"
-#include "AssetRegistry/AssetRegistryModule.h"
+#include "SlateWidgets/AssetActionsWidget.h"
 
 #define LOCTEXT_NAMESPACE "FAssetActionsManagerModule"
 
@@ -26,7 +26,6 @@ void FAssetActionsManagerModule::InitCBMenuExtension()
 	array of menu options
 */
 {
-	// Load CB module
 	FContentBrowserModule& ContentBrowserModule =
 		FModuleManager::LoadModuleChecked<FContentBrowserModule>(TEXT("ContentBrowser"));
 
@@ -79,59 +78,15 @@ void FAssetActionsManagerModule::AddCBMenuEntry(FMenuBuilder& MenuBuilder)
 }
 
 void FAssetActionsManagerModule::OnAssetActionsMenuEntryClicked()
+/*
+	Spawn the AssetActions tab when the menu entry is clicked
+*/
 {
 	// Fix up redirectors if needed
 	FixUpRedirectors();
 
 	// Spawn tab 
 	FGlobalTabmanager::Get()->TryInvokeTab(FName("AssetActions"));
-}
-
-void FAssetActionsManagerModule::FixUpRedirectors()
-{
-	// Load module
-	IAssetRegistry& AssetRegistry =
-		FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
-
-	// Create filter with asset paths
-	FARFilter Filter;
-	Filter.bRecursivePaths = true;
-	Filter.PackagePaths.Emplace("/Game");
-	Filter.ClassPaths.Add(UObjectRedirector::StaticClass()->GetClassPathName());
-
-	// Query for assets in selected paths
-	TArray<FAssetData> AssetList;
-	AssetRegistry.GetAssets(Filter, AssetList);
-
-	if (AssetList.Num() == 0) return;
-
-	// Get paths for each asset
-	TArray<FString> ObjectPaths;
-
-	for (const FAssetData& Asset : AssetList)
-	{
-		ObjectPaths.Add(Asset.GetObjectPathString());
-	}
-
-	// Load assets
-	TArray<UObject*> Objects;
-	bool Result = AssetViewUtils::LoadAssetsIfNeeded(ObjectPaths, Objects, true, true);
-
-	if (Result)
-	{
-		// Convert objects to object redirectors
-		TArray<UObjectRedirector*> Redirectors;
-		for (UObject* Object : Objects)
-		{
-			Redirectors.Add(CastChecked<UObjectRedirector>(Object));
-		}
-
-		// Call fix up redirectors from asset tools
-		FAssetToolsModule& AssetToolsModule =
-			FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
-
-		AssetToolsModule.Get().FixupReferencers(Redirectors);
-	}
 }
 
 #pragma endregion
@@ -232,6 +187,9 @@ TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::GetAllAssetDataUnderS
 #pragma region ProcessDataForWidget
 
 int32 FAssetActionsManagerModule::GetAssetReferencersCount(const TSharedPtr<FAssetData>& AssetData)
+/*
+	Return a count of all the asset references found for AssetData
+*/
 {
 	TArray<FString> AssetReferencers =
 		UEditorAssetLibrary::FindPackageReferencersForAsset(AssetData->GetSoftObjectPath().GetLongPackageName());
@@ -239,9 +197,70 @@ int32 FAssetActionsManagerModule::GetAssetReferencersCount(const TSharedPtr<FAss
 	return AssetReferencers.Num();
 }
 
+void FAssetActionsManagerModule::SyncCBToClickedAsset(const FString& ClickedAssetPath)
+/*
+	Navigate the content browser to the ClickedAssetPath
+*/
+{
+	// Convert path to array since that is what SyncBrowserToObjects expects
+	TArray<FString> AssetPathToSync;
+	AssetPathToSync.Add(ClickedAssetPath);
+
+	UEditorAssetLibrary::SyncBrowserToObjects(AssetPathToSync);
+}
+
+void FAssetActionsManagerModule::FixUpRedirectors()
+/*
+	Fix up any redirectors created on the whole project
+*/
+{
+	IAssetRegistry& AssetRegistry =
+		FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
+
+	// Create filter with asset paths
+	FARFilter Filter;
+	Filter.bRecursivePaths = true;
+	Filter.PackagePaths.Emplace("/Game");
+	Filter.ClassPaths.Add(UObjectRedirector::StaticClass()->GetClassPathName());
+
+	// Query for assets in selected paths
+	TArray<FAssetData> AssetList;
+	AssetRegistry.GetAssets(Filter, AssetList);
+
+	if (AssetList.Num() == 0) return;
+
+	// Get paths for each asset
+	TArray<FString> ObjectPaths;
+
+	for (const FAssetData& Asset : AssetList)
+	{
+		ObjectPaths.Add(Asset.GetObjectPathString());
+	}
+
+	// Load assets
+	TArray<UObject*> Objects;
+	bool Result = AssetViewUtils::LoadAssetsIfNeeded(ObjectPaths, Objects, true, true);
+
+	if (Result)
+	{
+		// Convert objects to object redirectors
+		TArray<UObjectRedirector*> Redirectors;
+		for (UObject* Object : Objects)
+		{
+			Redirectors.Add(CastChecked<UObjectRedirector>(Object));
+		}
+
+		// Call fix up redirectors from asset tools
+		FAssetToolsModule& AssetToolsModule =
+			FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
+
+		AssetToolsModule.Get().FixupReferencers(Redirectors);
+	}
+}
+
 TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::FilterForUnusedAssetData(const TArray<TSharedPtr<FAssetData>>& AssetDataToFilter)
 /*
-	List unsused assets by checking count of asset referencers for all assets under selected folder 
+	Return an array of unsused assets by checking count of asset referencers for all assets under selected folder 
 */
 {
 	TArray<TSharedPtr<FAssetData>> UnusedAssetsData;
@@ -262,6 +281,9 @@ TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::FilterForUnusedAssetD
 }
 
 TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::FilterForDuplicateNameData(const TArray<TSharedPtr<FAssetData>>& AssetDataToFilter)
+/*
+	Return an array of duplicate name assets by using a multimap to find asset names with more than one value
+*/
 {
 	TMultiMap<FString, TSharedPtr<FAssetData>> AssetsInfoMap;
 	TArray<TSharedPtr<FAssetData>> DuplicatedAssetData;
@@ -292,6 +314,9 @@ TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::FilterForDuplicateNam
 }
 
 TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::FilterForNoPrefixData(const TArray<TSharedPtr<FAssetData>>& AssetDataToFilter)
+/*
+	Return an array of assets with no prefix (or incorrect prefix) by checking asset names against the prefix map
+*/
 {
 	TArray<TSharedPtr<FAssetData>> NoPrefixAssets;
 
@@ -323,8 +348,7 @@ TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::FilterForNoPrefixData
 
 bool FAssetActionsManagerModule::DeleteAssetsInList(const TArray<FAssetData>& AssetsToDelete)
 /*
-	Return true if assets were deleted successfully by DeleteAssets fn from ObjectTools
-	Else return false
+	Return true if assets were successfully deleted; else return false
 */
 {
 	if (ObjectTools::DeleteAssets(AssetsToDelete) > 0)
@@ -335,16 +359,10 @@ bool FAssetActionsManagerModule::DeleteAssetsInList(const TArray<FAssetData>& As
 	return false;
 }
 
-void FAssetActionsManagerModule::SyncCBToClickedAsset(const FString& ClickedAssetPath)
-{
-	// Convert path to array since that is what SyncBrowserToObjects expects
-	TArray<FString> AssetPathToSync;
-	AssetPathToSync.Add(ClickedAssetPath);
-
-	UEditorAssetLibrary::SyncBrowserToObjects(AssetPathToSync);
-}
-
 bool FAssetActionsManagerModule::RenameAssetInList(const FString& NewName, const TSharedPtr<FAssetData>& AssetToRename)
+/*
+	Return true if assets were successfully renamed; else return false
+*/
 {
 	const FString OldAssetPath = AssetToRename->GetObjectPathString();
 	const FString NewAssetPath = FPaths::Combine(AssetToRename->PackagePath.ToString(), NewName);
@@ -354,13 +372,14 @@ bool FAssetActionsManagerModule::RenameAssetInList(const FString& NewName, const
 		UEditorAssetLibrary::SaveAsset(NewAssetPath, false);
 		return true;
 	}
-	else
-	{
-		return false;
-	}
+
+	return false;
 }
 
 bool FAssetActionsManagerModule::DuplicateAssetsInList(int32 NumOfDuplicates, const TArray<TSharedPtr<FAssetData>>& AssetsToDuplicate)
+/*
+	Return true if assets were successfully duplicated; else return false
+*/
 {
 	uint32 Count = 0;
 
@@ -410,14 +429,14 @@ bool FAssetActionsManagerModule::DuplicateAssetsInList(int32 NumOfDuplicates, co
 	{
 		return true;
 	}
-
-	else
-	{
-		return false;
-	}
+	
+	return false;
 }
 
 bool FAssetActionsManagerModule::AddPrefixesToAssetsInList(const TArray<TSharedPtr<FAssetData>>& AssetsToAddPrefixes)
+/*
+	Return true if prefixes were successfully added to asset names; else return false
+*/
 {
 	uint32 Count = 0;
 	for (const TSharedPtr<FAssetData>& Asset : AssetsToAddPrefixes)
@@ -440,6 +459,7 @@ bool FAssetActionsManagerModule::AddPrefixesToAssetsInList(const TArray<TSharedP
 			continue;
 		}
 
+		// Remove Unreal default _Inst for Material Instances
 		if (Asset->GetClass()->GetName() == TEXT("MaterialInstanceConstant"))
 		{
 			if (OldName.Contains(TEXT("_Inst")))
@@ -462,6 +482,7 @@ bool FAssetActionsManagerModule::AddPrefixesToAssetsInList(const TArray<TSharedP
 		const FString NewNameWithPrefix = *PrefixFound + OldName;
 
 		FString OldAssetPath = Asset->GetObjectPathString();
+		
 		// Avoid TryConvertFilenameToLongPackageName warning
 		TArray<FString> PathNameArray;
 		OldAssetPath.ParseIntoArray(PathNameArray, TEXT("."));
@@ -481,13 +502,14 @@ bool FAssetActionsManagerModule::AddPrefixesToAssetsInList(const TArray<TSharedP
 	{
 		return true;
 	}
-	else
-	{
-		return false;
-	}
+	
+	return false;
 }
 
 bool FAssetActionsManagerModule::ReplaceString(const FString& OldString, const FString& NewString, const TArray<TSharedPtr<FAssetData>>& AssetsToReplace)
+/*
+	Return true if user entered string to replace was successfully replaced with new string; else return false
+*/
 {
 	uint32 Count = 0;
 
@@ -500,6 +522,7 @@ bool FAssetActionsManagerModule::ReplaceString(const FString& OldString, const F
 			FString NewAssetName = OldAssetName.Replace(*OldString, *NewString, ESearchCase::CaseSensitive);
 
 			FString OldAssetPath = Asset->GetObjectPathString();
+			
 			// Avoid TryConvertFilenameToLongPackageName warning
 			TArray<FString> PathNameArray;
 			OldAssetPath.ParseIntoArray(PathNameArray, TEXT("."));
@@ -519,10 +542,8 @@ bool FAssetActionsManagerModule::ReplaceString(const FString& OldString, const F
 	{
 		return true;
 	}
-	else
-	{
-		return false;
-	}
+	
+	return false;
 }
 
 #pragma endregion

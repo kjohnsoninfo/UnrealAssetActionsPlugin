@@ -22,7 +22,7 @@ public:
 	FString NewString;
 
 private:
-	/** Renames the asset based on dialog parameters */
+	/** Replaces the string in the asset name based on user inputs */
 	FReply OnReplaceClicked();
 
 	/** Sends string input data and attempts to close the active window */

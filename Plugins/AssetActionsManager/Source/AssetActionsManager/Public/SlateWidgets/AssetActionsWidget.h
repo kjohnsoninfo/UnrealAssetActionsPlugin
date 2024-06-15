@@ -2,9 +2,9 @@
 
 #pragma once
 
-#include "Widgets/SCompoundWidget.h"
-#include "Widgets/Text/SRichTextBlock.h"
 #include "Widgets/Input/SNumericEntryBox.h"
+#include "Widgets/Text/SRichTextBlock.h"
+#include "Widgets/SCompoundWidget.h"
 
 namespace AssetActionsColumns
 {
@@ -23,14 +23,13 @@ class SAssetActionsTab : public SCompoundWidget
 		/**
 		 * Argument used to pass asset data between manager and widget
 		 * 
-		 * @note AssetsDataFromManager: Array of asset data from the manager
+		 * @note: AllAssetsDataFromManager: Array of asset data from the manager
 		 * This argument name matches the FArg in the OnSpawn fn in AssetActionsManager.
-		 * 
 		 * The type must match what the ListItemSource fn in ConstructAssetListView expects.
 		 */
 		SLATE_ARGUMENT(TArray<TSharedPtr<FAssetData>>, AllAssetsDataFromManager) 
 
-		/** Argument for the folder path that user selected when spawning tab */
+		/** Argument for the folder path(s) that user selected when spawning tab */
 		SLATE_ARGUMENT(TArray<FString>, SelectedFoldersPaths)
 
 	SLATE_END_ARGS()
@@ -45,6 +44,7 @@ public:
 	void Construct(const FArguments& InArgs);
 
 private:
+
 #pragma region TitleSlot
 	
 	/** Display a label at the top of the widget */
@@ -53,8 +53,10 @@ private:
 	/** Display title at the top center of the widget */
 	TSharedRef<STextBlock> ConstructTitleText(const FString& TitleText);
 
-	/** Construct Help Button and when clicked, go to documentation webpage */
+	/** Construct Help Button and set delegate function for onclicked */
 	TSharedRef<SButton> ConstructHelpButton();
+
+	/** Delegate fn that opens external URL to documentation page */
 	FReply OnHelpButtonClicked();
 
 #pragma endregion
@@ -74,7 +76,7 @@ private:
 	/** Construct ComboBox that allows to user to filter asset list vew */
 	TSharedRef<SComboBox<TSharedPtr<FString>>> ConstructFilterComboBox();
 
-	/** Construct widgets to contain the filter items in the ComboBox dropdown options*/
+	/** Construct widgets to contain the filter items in the ComboBox dropdown options */
 	TSharedRef<SWidget> OnGenerateFilterItem(TSharedPtr<FString> FilterItem);
 
 	/** Delegate function to apply filter criteria based on user selection */
@@ -157,10 +159,10 @@ private:
 	/** Array to hold unused assets filtered by manager */
 	TArray<TSharedPtr<FAssetData>> UnusedAssetsData;
 
-	/** Array to hold assets with duplciate names filtered by manager */
+	/** Array to hold assets with duplicate names filtered by manager */
 	TArray<TSharedPtr<FAssetData>> DuplicatedNameAssetsData;
 
-	/** Array to hold assets with no prefix filtered by manager */
+	/** Array to hold assets with no prefix (or incorrect prefix) filtered by manager */
 	TArray<TSharedPtr<FAssetData>> NoPrefixAssetsData;
 
 	/** 
@@ -202,12 +204,13 @@ private:
 	/** Delegate function that opens a dialog box for the user to enter a new asset name */
 	FReply OnRenameButtonClicked(TSharedPtr<FAssetData> ClickedAssetData);
 
-	/** Call the rename fn from the manager and passes in the user chosen new name */
+	/** Call the rename fn from the manager and passes in the user entered new name */
 	void RenameAsset(const FString& NewName, const TSharedPtr<FAssetData>& AssetToRename);
 
 #pragma endregion
 
 #pragma region ButtonSlot
+
 	/** Common function to construct buttons in the button slot */
 	TSharedRef<SButton> ConstructButtonForSlot(const FString& ButtonName);
 
@@ -217,19 +220,19 @@ private:
 	/** Assign different onClicked fns to each button based on button name */
 	void AssignButtonClickFns(const FString& ButtonName);
 
-	/** Delegate function that replaces a string or phrase in asset names */
+	/** Delegate function that calls the manager adds prefix fn for all checked assets */
 	FReply OnAddPrefixButtonClicked();
 
 	/** Delegate function that calls the manager delete fn to delete all checked assets */
 	FReply OnDeleteSelectedButtonClicked();
 
-	/** Delegate function that checks state of all checkboxes and toggles to checked */
+	/** Delegate function that calls the manager duplciate fn to duplicate all checked assets */
 	FReply OnDuplicateSelectedButtonClicked();
 
 	/** Display a modal dialog to get user input for number of duplicates */
 	int32 GetUserNumberForDuplicates();
 
-	/** Delegate function that replaces a string or phrase in asset names */
+	/** Delegate function that replaces a string or phrase in asset names for all checked assets */
 	FReply OnReplaceStringButtonClicked();
 
 #pragma endregion
@@ -237,7 +240,7 @@ private:
 #pragma region HelpfulInfoSlot
 
 	/** 
-	 * String containing message displayed for the asset count
+	 * String containing text displayed for the asset count
 	 * 
 	 * @note: this is reassigned when widget is refreshed
 	 */
@@ -269,7 +272,7 @@ private:
 	/** Refresh widget to ensure text and list view are always up to date */
 	void RefreshWidget();
 
-	/** Helper function to update changes in the list view such as moving folders or adding assets  */
+	/** Helper function to filter asset data found under the selected folder  */
 	void FilterAssetData();
 
 	/** Helper function to remove asset data from arrays when deleted */
