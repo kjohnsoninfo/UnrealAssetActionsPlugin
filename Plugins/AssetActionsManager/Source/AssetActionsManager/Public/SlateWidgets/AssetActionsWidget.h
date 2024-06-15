@@ -157,8 +157,11 @@ private:
 	/** Array to hold unused assets filtered by manager */
 	TArray<TSharedPtr<FAssetData>> UnusedAssetsData;
 
-	/** Array to hold unused assets filtered by manager */
+	/** Array to hold assets with duplciate names filtered by manager */
 	TArray<TSharedPtr<FAssetData>> DuplicatedNameAssetsData;
+
+	/** Array to hold assets with no prefix filtered by manager */
+	TArray<TSharedPtr<FAssetData>> NoPrefixAssetsData;
 
 	/** 
 	 * Array to hold all constructed CheckBoxes when widget is constructed
@@ -213,6 +216,9 @@ private:
 
 	/** Assign different onClicked fns to each button based on button name */
 	void AssignButtonClickFns(const FString& ButtonName);
+
+	/** Delegate function that replaces a string or phrase in asset names */
+	FReply OnAddPrefixButtonClicked();
 
 	/** Delegate function that calls the manager delete fn to delete all checked assets */
 	FReply OnDeleteSelectedButtonClicked();

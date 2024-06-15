@@ -11,12 +11,14 @@
 #include "Dialog/SCustomDialog.h"
 
 #define LOCTEXT_NAMESPACE "SAssetActionsTab"
+#define AddPrefixSelected TEXT("Add Prefixes for Selected")
 #define DeleteSelected TEXT("Delete Selected")
 #define DuplicateSelected TEXT("Duplicate Selected")
 #define ReplaceStringSelected TEXT("Replace String for Selected")
 #define ListAll TEXT("List All Assets")
 #define ListUnused TEXT("List Unused Assets")
 #define ListDuplicate TEXT("List Duplicate Name Assets")
+#define ListNoPrefix TEXT("List Assets with No Prefix")
 
 void SAssetActionsTab::Construct(const FArguments& InArgs)
 /*
@@ -43,6 +45,7 @@ void SAssetActionsTab::Construct(const FArguments& InArgs)
 	FilterListItems.Add(MakeShared<FString>(ListAll));
 	FilterListItems.Add(MakeShared<FString>(ListUnused));
 	FilterListItems.Add(MakeShared<FString>(ListDuplicate));
+	FilterListItems.Add(MakeShared<FString>(ListNoPrefix));
 
 	ChildSlot
 		[
@@ -151,25 +154,33 @@ void SAssetActionsTab::Construct(const FArguments& InArgs)
 			.AutoHeight()
 			[
 				SNew(SHorizontalBox)
-
+				
+				// Add Prefix to Selected
+				+ SHorizontalBox::Slot()
+				.FillWidth(5.f)
+				.Padding(5.f)
+				[
+					ConstructButtonForSlot(AddPrefixSelected)
+				]
+				
 				// Delete Selected 
 				+ SHorizontalBox::Slot()
-				.FillWidth(10.f)
+				.FillWidth(5.f)
 				.Padding(5.f)
 				[
 					ConstructButtonForSlot(DeleteSelected)
 				]
 
-				// Select All
+				// Duplicate Selected
 				+ SHorizontalBox::Slot()
-				.FillWidth(10.f)
+				.FillWidth(5.f)
 				.Padding(5.f)
 				[
 					ConstructButtonForSlot(DuplicateSelected)
 				]
-				// Deselect All
+				// Replace String for Selected
 				+ SHorizontalBox::Slot()
-				.FillWidth(10.f)
+				.FillWidth(5.f)
 				.Padding(5.f)
 				[
 					ConstructButtonForSlot(ReplaceStringSelected)
@@ -314,6 +325,14 @@ void SAssetActionsTab::OnFilterSelectionChanged(TSharedPtr<FString> SelectedFilt
 	{
 		// Filter items
 		DisplayedAssetsData = DuplicatedNameAssetsData;
+		RefreshWidget();
+	}
+
+	// Display assets with no prefixes 
+	else if (SelectedFilterText == ListNoPrefix)
+	{
+		// Filter items
+		DisplayedAssetsData = NoPrefixAssetsData;
 		RefreshWidget();
 	}
 }
@@ -1014,7 +1033,11 @@ void SAssetActionsTab::AssignButtonClickFns(const FString& ButtonName)
 	Assign the different onClicked fns to each button based on button name
 */
 {
-	if (ButtonName == DeleteSelected)
+	if (ButtonName == AddPrefixSelected)
+	{
+		OnAddPrefixButtonClicked();
+	}
+	else if (ButtonName == DeleteSelected)
 	{
 		OnDeleteSelectedButtonClicked();
 	}
@@ -1026,6 +1049,27 @@ void SAssetActionsTab::AssignButtonClickFns(const FString& ButtonName)
 	{
 		OnReplaceStringButtonClicked();
 	}
+}
+
+FReply SAssetActionsTab::OnAddPrefixButtonClicked()
+{
+	if (CheckedAssets.Num() == 0)
+	{
+		DebugHelper::MessageDialogBox(EAppMsgType::Ok, TEXT("No assets selected."));
+		return FReply::Handled();
+	}
+
+	// Load module
+	FAssetActionsManagerModule& AssetActionsManager = LoadManagerModule();
+
+	bool bPrefixesAdded = AssetActionsManager.AddPrefixesToAssetsInList(CheckedAssets);
+
+	if (bPrefixesAdded)
+	{
+		RefreshWidget();
+	}
+
+	return FReply::Handled();
 }
 
 FReply SAssetActionsTab::OnDeleteSelectedButtonClicked()
@@ -1318,6 +1362,11 @@ void SAssetActionsTab::RefreshWidget()
 		DisplayedAssetsData = DuplicatedNameAssetsData;
 	}
 
+	else if (ComboBoxDisplayedText->GetText().ToString() == ListNoPrefix)
+	{
+		DisplayedAssetsData = NoPrefixAssetsData;
+	}
+
 	// Refresh sorting
 	UpdateSorting();
 
@@ -1343,7 +1392,7 @@ void SAssetActionsTab::FilterAssetData()
 
 	UnusedAssetsData = AssetActionsManager.FilterForUnusedAssetData(AllAssetsDataFromManager);
 	DuplicatedNameAssetsData = AssetActionsManager.FilterForDuplicateNameData(AllAssetsDataFromManager);
-
+	NoPrefixAssetsData = AssetActionsManager.FilterForNoPrefixData(AllAssetsDataFromManager);
 }
 
 void SAssetActionsTab::EnsureAssetDeletionFromLists(const TSharedPtr<FAssetData>& AssetDataToDelete)
@@ -1366,6 +1415,11 @@ void SAssetActionsTab::EnsureAssetDeletionFromLists(const TSharedPtr<FAssetData>
 	if (DuplicatedNameAssetsData.Contains(AssetDataToDelete))
 	{
 		DuplicatedNameAssetsData.Remove(AssetDataToDelete);
+	}
+
+	if (NoPrefixAssetsData.Contains(AssetDataToDelete))
+	{
+		NoPrefixAssetsData.Remove(AssetDataToDelete);
 	}
 }
 

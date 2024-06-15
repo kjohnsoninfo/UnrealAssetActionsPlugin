@@ -16,6 +16,9 @@ void SRenameAssetDialog::Construct(const FArguments& InArgs)
 {
 	AssetData = InArgs._AssetData;
 
+	FSlateFontInfo DialogFont = FAppStyle::GetFontStyle(TEXT("PropertyWindow.NormalFont"));
+	DialogFont.Size = 10;
+
 	ChildSlot
 		[
 			SNew(SBox)
@@ -31,7 +34,7 @@ void SRenameAssetDialog::Construct(const FArguments& InArgs)
 						.HAlign(HAlign_Left)
 						[
 							SNew(STextBlock)
-								.Font(FAppStyle::GetFontStyle(TEXT("PropertyWindow.NormalFont")))
+								.Font(DialogFont)
 								.Text(LOCTEXT("CurrentName", "Current Name:"))
 						]
 
@@ -41,7 +44,7 @@ void SRenameAssetDialog::Construct(const FArguments& InArgs)
 						.HAlign(HAlign_Fill)
 						[
 							SNew(STextBlock)
-								.Font(FAppStyle::GetFontStyle(TEXT("PropertyWindow.NormalFont")))
+								.Font(DialogFont)
 								.Text(FText::FromName(AssetData->AssetName))
 						]
 
@@ -52,7 +55,7 @@ void SRenameAssetDialog::Construct(const FArguments& InArgs)
 						.HAlign(HAlign_Left)
 						[
 							SNew(STextBlock)
-								.Font(FAppStyle::GetFontStyle(TEXT("PropertyWindow.NormalFont")))
+								.Font(DialogFont)
 								.Text(LOCTEXT("NewName", "New Name:"))
 						]
 
@@ -62,7 +65,7 @@ void SRenameAssetDialog::Construct(const FArguments& InArgs)
 						.HAlign(HAlign_Fill)
 						[
 							SAssignNew(NewNameTextBox, SEditableTextBox)
-								.Font(FAppStyle::GetFontStyle(TEXT("PropertyWindow.NormalFont")))
+								.Font(DialogFont)
 								.Text(FText::FromName(AssetData->AssetName))
 								.OnTextCommitted(this, &SRenameAssetDialog::OnRenameTextCommitted)
 						]

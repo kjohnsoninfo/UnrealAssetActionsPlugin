@@ -291,6 +291,36 @@ TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::FilterForDuplicateNam
 	return DuplicatedAssetData;
 }
 
+TArray<TSharedPtr<FAssetData>> FAssetActionsManagerModule::FilterForNoPrefixData(const TArray<TSharedPtr<FAssetData>>& AssetDataToFilter)
+{
+	TArray<TSharedPtr<FAssetData>> NoPrefixAssets;
+
+	for (const TSharedPtr<FAssetData>& Asset : AssetDataToFilter)
+	{
+		FString* PrefixFound = PrefixesMap.Find(Asset->GetClass()->GetName());
+		FString AssetName = Asset->AssetName.ToString();
+
+		// skip maps
+		if (Asset->GetClass()->GetName() == TEXT("World")) { continue; }
+
+		if (!PrefixFound)
+		{
+			DebugHelper::PrintLog("No prefix found for asset: " + AssetName);
+			continue;
+		}
+
+		else
+		{
+			if (!AssetName.Contains(*PrefixFound))
+			{
+				NoPrefixAssets.Add(Asset);
+			}
+		}
+	}
+
+	return NoPrefixAssets;
+}
+
 bool FAssetActionsManagerModule::DeleteAssetsInList(const TArray<FAssetData>& AssetsToDelete)
 /*
 	Return true if assets were deleted successfully by DeleteAssets fn from ObjectTools
@@ -360,12 +390,9 @@ bool FAssetActionsManagerModule::DuplicateAssetsInList(int32 NumOfDuplicates, co
 			// if duplicated name already found, add number to suffix
 			for (int32 j = 1; j < AssetNames.Num(); ++j)
 			{
-				DebugHelper::PrintLog(FString::FromInt(j));
-				DebugHelper::PrintLog(AssetNames[j]);
 				if (AssetNames[j] == DuplicatedAssetName)
 				{
 					DuplicatedAssetName = AssetToDuplicate->AssetName.ToString() + FString::FromInt(i + 1 + j);
-					DebugHelper::PrintLog("add"+DuplicatedAssetName);
 				}
 			}
 
@@ -384,6 +411,76 @@ bool FAssetActionsManagerModule::DuplicateAssetsInList(int32 NumOfDuplicates, co
 		return true;
 	}
 
+	else
+	{
+		return false;
+	}
+}
+
+bool FAssetActionsManagerModule::AddPrefixesToAssetsInList(const TArray<TSharedPtr<FAssetData>>& AssetsToAddPrefixes)
+{
+	uint32 Count = 0;
+	for (const TSharedPtr<FAssetData>& Asset : AssetsToAddPrefixes)
+	{
+		FString* PrefixFound = PrefixesMap.Find(Asset->GetClass()->GetName());
+		FString OldName = Asset->AssetName.ToString();
+
+		// skip maps
+		if (Asset->GetClass()->GetName() == TEXT("World")) { continue; }
+
+		if (!PrefixFound)
+		{
+			DebugHelper::PrintLog("No prefix found for asset: " + OldName);
+			continue;
+		}
+
+		if (OldName.StartsWith(*PrefixFound))
+		{
+			DebugHelper::PrintLog(OldName + " already has prefix added");
+			continue;
+		}
+
+		if (Asset->GetClass()->GetName() == TEXT("MaterialInstanceConstant"))
+		{
+			if (OldName.Contains(TEXT("_Inst")))
+			{
+
+				TArray<FString> NameArray;
+				OldName.ParseIntoArray(NameArray, TEXT("_Inst"));
+
+				OldName.Empty();
+
+				for (FString Name : NameArray)
+				{
+					OldName.Append(Name);
+				}
+			}
+
+			OldName.RemoveFromStart(TEXT("M_"));
+		}
+
+		const FString NewNameWithPrefix = *PrefixFound + OldName;
+
+		FString OldAssetPath = Asset->GetObjectPathString();
+		// Avoid TryConvertFilenameToLongPackageName warning
+		TArray<FString> PathNameArray;
+		OldAssetPath.ParseIntoArray(PathNameArray, TEXT("."));
+		OldAssetPath = PathNameArray[0];
+
+		const FString NewAssetPath = FPaths::Combine(Asset->PackagePath.ToString(), NewNameWithPrefix);
+
+		if (UEditorAssetLibrary::RenameAsset(OldAssetPath, NewAssetPath))
+		{
+			UEditorAssetLibrary::SaveAsset(NewAssetPath, false);
+			++Count;
+		}
+
+	}
+
+	if (Count > 0)
+	{
+		return true;
+	}
 	else
 	{
 		return false;
@@ -416,8 +513,6 @@ bool FAssetActionsManagerModule::ReplaceString(const FString& OldString, const F
 				++Count;
 			}
 		}
-
-		else { continue; }
 	}
 
 	if (Count > 0)
