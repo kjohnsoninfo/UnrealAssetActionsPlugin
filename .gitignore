@@ -14,3 +14,7 @@ DerivedDataCache/
 Intermediate/
 Saved/
 StarterContent/
+Config/
+Content/
+Source/
+.uproject
