@@ -281,8 +281,8 @@ private:
 	/** Helper function to get map of asset names and paths */
 	TMultiMap<FString, FString> GetCheckBoxAssetMap(const TArray<TSharedPtr<FAssetData>> CheckBoxStateArray);
 
-	/** Helper function to empty all data arrays associated with checkboxes */
-	void ClearCheckedStates();
+	/** Helper function to ensure header checkbox state matches row checkbox states */
+	void TrackCheckBoxStateForHeader();
 
 	/** Helper function to load asset action manager module */
 	class FAssetActionsManagerModule& LoadManagerModule() const 

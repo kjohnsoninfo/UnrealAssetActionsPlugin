@@ -840,7 +840,6 @@ void SAssetActionsTab::OnCheckBoxStateChanged(ECheckBoxState CheckBoxState, TSha
 	case ECheckBoxState::Unchecked:
 
 		// if found in checked assets, remove asset
-		
 		if (CheckedAssetMap.FindPair(AssetName, AssetPath) != nullptr) 
 		{
 			TArray<TSharedPtr<FAssetData>> AssetsToRemove;
@@ -865,17 +864,7 @@ void SAssetActionsTab::OnCheckBoxStateChanged(ECheckBoxState CheckBoxState, TSha
 			UncheckedAssets.AddUnique(ClickedAssetData);
 		}
 
-		// if row checkboxes have both states, set headercheckbox to undetermined
-		if (UncheckedAssets.Num() > 0 && CheckedAssets.Num() > 0)
-		{
-			HeaderCheckBox->SetIsChecked(ECheckBoxState::Undetermined);
-		}
-
-		// if row checkboxes are all unchecked, set headercheckbox to unchecked
-		if (CheckedAssets.Num() == 0)
-		{
-			HeaderCheckBox->SetIsChecked(ECheckBoxState::Unchecked);
-		}
+		TrackCheckBoxStateForHeader();
 
 		break;
 
@@ -906,17 +895,7 @@ void SAssetActionsTab::OnCheckBoxStateChanged(ECheckBoxState CheckBoxState, TSha
 			CheckedAssets.AddUnique(ClickedAssetData);
 		}
 
-		// if row checkboxes have both states, set headercheckbox to undetermined
-		if (UncheckedAssets.Num() > 0 && CheckedAssets.Num() > 0)
-		{
-			HeaderCheckBox->SetIsChecked(ECheckBoxState::Undetermined);
-		}
-
-		// if row checkboxes are all checked, set headercheckbox to checked
-		if (UncheckedAssets.Num() == 0)
-		{
-			HeaderCheckBox->SetIsChecked(ECheckBoxState::Checked);
-		}
+		TrackCheckBoxStateForHeader();
 
 		break;
 
@@ -1004,8 +983,12 @@ void SAssetActionsTab::RenameAsset(const FString& NewName, const TSharedPtr<FAss
 
 	if (bAssetRenamed)
 	{
+		CheckedAssets.Remove(AssetToRename);
+		UncheckedAssets.AddUnique(AssetToRename);
 		RefreshWidget();
 	}
+
+	TrackCheckBoxStateForHeader();
 }
 
 #pragma endregion
@@ -1088,8 +1071,11 @@ FReply SAssetActionsTab::OnAddPrefixButtonClicked()
 
 	if (bPrefixesAdded)
 	{
+		CheckedAssets.Empty();
 		RefreshWidget();
 	}
+
+	TrackCheckBoxStateForHeader();
 
 	return FReply::Handled();
 }
@@ -1125,7 +1111,9 @@ FReply SAssetActionsTab::OnDeleteSelectedButtonClicked()
 			EnsureAssetDeletionFromLists(DeletedAsset);
 		}
 
+		CheckedAssets.Empty();
 		RefreshWidget();
+		TrackCheckBoxStateForHeader();
 	}
 
 	return FReply::Handled();
@@ -1151,7 +1139,9 @@ FReply SAssetActionsTab::OnDuplicateSelectedButtonClicked()
 
 	if (bAssetsDuplicated)
 	{
+		CheckedAssets.Empty();
 		RefreshWidget();
+		TrackCheckBoxStateForHeader();
 	}
 
 	return FReply::Handled();
@@ -1280,7 +1270,9 @@ FReply SAssetActionsTab::OnReplaceStringButtonClicked()
 
 	if (bStringReplaced)
 	{
+		CheckedAssets.Empty();
 		RefreshWidget();
+		TrackCheckBoxStateForHeader();
 	}
 
 	return FReply::Handled();
@@ -1471,11 +1463,28 @@ TMultiMap<FString, FString> SAssetActionsTab::GetCheckBoxAssetMap(const TArray<T
 	return AssetMap;
 }
 
-void SAssetActionsTab::ClearCheckedStates()
+void SAssetActionsTab::TrackCheckBoxStateForHeader()
+/*
+	Helper fn that checks state of assets and sets headercheckbox to appropriate state
+*/
 {
-	CheckBoxesArray.Empty();
-	CheckedAssets.Empty();
-	UncheckedAssets.Empty();
+	// if row checkboxes have both states, set headercheckbox to undetermined
+	if (UncheckedAssets.Num() > 0 && CheckedAssets.Num() > 0)
+	{
+		HeaderCheckBox->SetIsChecked(ECheckBoxState::Undetermined);
+	}
+
+	// if row checkboxes are all unchecked, set headercheckbox to unchecked
+	else if (CheckedAssets.Num() == 0)
+	{
+		HeaderCheckBox->SetIsChecked(ECheckBoxState::Unchecked);
+	}
+
+	// if row checkboxes are all checked, set headercheckbox to checked
+	else if (UncheckedAssets.Num() == 0)
+	{
+		HeaderCheckBox->SetIsChecked(ECheckBoxState::Checked);
+	}
 }
 
 #pragma endregion
