@@ -27,8 +27,7 @@
 
 Quick Asset Actions Demo
 
-![demo.gif](Images/AssetActionsDemo.gif)
-
+[![demo.gif](Images/AssetActionsDemo.gif)](Images/AssetActionsDemo.gif)
 Overview of the UI
 
 ![UIoverview.png](Images/UIoverview.png)
