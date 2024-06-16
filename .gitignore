@@ -17,4 +17,4 @@ StarterContent/
 Config/
 Content/
 Source/
-.uproject
+*.uproject
