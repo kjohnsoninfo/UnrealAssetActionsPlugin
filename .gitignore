@@ -16,7 +16,7 @@ Saved/
 StarterContent/
 Config/
 !Plugins/AssetActionsManager/Config/
-!Plugins/AssetActionsManager/Source/
 Content/
 Source/
+!Plugins/AssetActionsManager/Source/
 *.uproject
